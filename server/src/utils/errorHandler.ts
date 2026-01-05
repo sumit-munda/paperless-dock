@@ -1,6 +1,6 @@
 // Custom application error class that standardizes HTTP status, error type,
 // and marks errors as operational for centralized error handling.
-export class AppError extends Error {
+export class ErrorHandler extends Error {
   statusCode: number;
   status: 'fail' | 'error';
   isOperational: boolean;

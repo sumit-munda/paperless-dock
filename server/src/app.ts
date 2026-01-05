@@ -1,7 +1,7 @@
 import express from "express";
 import "dotenv/config";
 import { notFound } from "./middlewares/notFound.js";
-import { errorHandler } from "./middlewares/errorHandler.js";
+import { errorMiddleware } from "./middlewares/errorMiddleware.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -18,7 +18,7 @@ app.get("/", (req, res) => {
 app.use(notFound);
 
 // Central error handler (LAST)
-app.use(errorHandler);
+app.use(errorMiddleware);
 
 const startServer = () => {
   app.listen(PORT, () =>
