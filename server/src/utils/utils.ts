@@ -28,3 +28,6 @@ export const generateUsernameFromEmail = (email: string): string => {
 
   return username;
 };
+
+
+

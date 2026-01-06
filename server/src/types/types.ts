@@ -40,3 +40,12 @@ export interface IUser extends Document<string> {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface AuthPayload {
+  id: string;
+  role?: "admin" | "seller" | "user";
+}
+
+export interface AuthRequest extends Request {
+  user?: AuthPayload | null;
+}
