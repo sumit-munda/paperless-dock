@@ -18,6 +18,9 @@ export interface IUser extends Document<string> {
   bio: string;
   email: string;
   password?: string;
+  passwordNeedsReset?: boolean;
+  passwordResetToken?: string;
+  passwordResetExpires?: Date;
   provider: "credentials" | "google";
   googleId?: string;
   photo: string;
@@ -41,11 +44,23 @@ export interface IUser extends Document<string> {
   updatedAt: Date;
 }
 
+// Mutler file type
+export interface MulterFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  path: string;
+  filename?: string;
+}
+
 export interface AuthPayload {
   id: string;
   role?: "admin" | "seller" | "user";
 }
 
 export interface AuthRequest extends Request {
-  user?: AuthPayload | null;
+  user?: AuthPayload;
+  file?: MulterFile
 }

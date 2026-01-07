@@ -40,6 +40,15 @@ const userSchema = new mongoose.Schema<IUser>(
       required: function (this: any) {
         return this.provider === "credentials";
       },
+      select: false,
+    },
+    passwordNeedsReset: {
+      type: Boolean,
+      default: false,
+    },
+    passwordResetToken: { type: String },
+    passwordResetExpires: {
+      type: Date,
     },
     provider: {
       type: String,
@@ -94,3 +103,5 @@ const userSchema = new mongoose.Schema<IUser>(
 );
 
 export const User = mongoose.model<IUser>("user", userSchema);
+
+// One-time DB migration

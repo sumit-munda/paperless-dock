@@ -4,20 +4,22 @@ import { TryCatch } from "../utils/asyncHandler.js";
 import { setAuthCookies } from "../utils/cookies.js";
 import { ErrorHandler } from "../utils/errorHandler.js";
 import {
-    generateAccessToken,
-    generateRefreshToken,
-    verifyRefreshToken,
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
 } from "../utils/jwt.js";
 
 import { Request, Response } from "express";
-import { LoginUserDTO } from "../dtos/auth.dto.js";
+import { ForgotPasswordDTO, LoginUserDTO } from "../dtos/auth.dto.js";
 import {
-    RegisterUserCredentialsDTO,
-    RegisterUserGoogleDTO,
-} from "../dtos/user.dto.js";
-import { checkExistingUser } from "../services/user.service.js";
+  RegisterUserCredentialsDTO,
+  RegisterUserGoogleDTO,
+} from "../dtos/auth.dto.js";
+import { getUserByEmail } from "../services/user.service.js";
 import { clearAuthCookies } from "../utils/cookies.js";
-import { verifyPassword } from "../utils/password.js";
+import { hashPassword, verifyPassword } from "../utils/password.js";
+import { hashToken } from "../utils/utils.js";
+import crypto from "crypto";
 
 export const registerUserWithCredentials = TryCatch(
   async (req: Request<{}, {}, RegisterUserCredentialsDTO>, res, next) => {
@@ -29,7 +31,7 @@ export const registerUserWithCredentials = TryCatch(
     }
 
     // Check if user already exists
-    if (await checkExistingUser(email)) {
+    if (await getUserByEmail(email)) {
       return next(new ErrorHandler("Email already registered", 409));
     }
 
@@ -37,7 +39,7 @@ export const registerUserWithCredentials = TryCatch(
     await User.create({
       name: name.trim(),
       email: email.toLowerCase().trim(),
-      password,
+      password: await hashPassword(password),
       provider: "credentials",
     });
 
@@ -53,7 +55,7 @@ export const registerUserWithGoogle = TryCatch(
     const { name, email, googleId, photo } = req.body;
 
     // Check if user already exists
-    if (await checkExistingUser(email)) {
+    if (await getUserByEmail(email)) {
       return next(new ErrorHandler("Email already registered", 409));
     }
 
@@ -83,11 +85,16 @@ export const loginUser = TryCatch(
     }
 
     // Find user
-    const user = await User.findOne({ email: email.toLowerCase() }).select(
+    const user = await User.findOne({ email: email.trim().toLowerCase() }).select(
       "+password"
     );
     if (!user || user.provider !== "credentials") {
       return next(new ErrorHandler("Invalid credentials", 401));
+    }
+
+    // Block login until reset
+    if (user.passwordNeedsReset) {
+      return next(new ErrorHandler("Password reset required", 403));
     }
 
     // Compare password
@@ -127,7 +134,7 @@ export const logoutUser = (req: Request, res: Response) => {
 };
 
 export const refreshAccessToken = TryCatch(
-  async (req: AuthRequest, res, next) => {
+  async (req, res, next) => {
     const token = req.cookies?.refresh_token;
     if (!token) throw new ErrorHandler("Unauthorized", 401);
 
@@ -158,3 +165,66 @@ export const refreshAccessToken = TryCatch(
     });
   }
 );
+
+export const forgotPassword = TryCatch(
+  async (req: Request<{}, {}, ForgotPasswordDTO>, res, next) => {
+    const { email } = req.body;
+    if (!email) {
+      return next(new ErrorHandler("Email is required", 400));
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      // Prevent email enumeration
+      res.status(200).json({
+        success: true,
+        message: "If the email exists, a reset link has been sent",
+      });
+      return;
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    user.passwordResetToken = hashToken(resetToken);
+    user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
+    await user.save({ validateBeforeSave: false });
+
+    // DEV ONLY - log token instead of email
+    console.log("RESET LINK:", `/reset-password/${resetToken}`);
+
+    res.status(200).json({
+      success: true,
+      message: "Password reset link sent",
+    });
+  }
+);
+
+export const resetPassword = TryCatch(async (req, res, next) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  if (!password) {
+    return next(new ErrorHandler("New password is required", 400));
+  }
+
+  const user = await User.findOne({
+    passwordResetToken: hashToken(token),
+    passwordResetExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new ErrorHandler("Invalid or expired reset token", 400));
+  }
+
+  user.password = await hashPassword(password);
+  user.passwordNeedsReset = false;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Password reset successful",
+  });
+});

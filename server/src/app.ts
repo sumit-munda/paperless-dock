@@ -4,6 +4,7 @@ import { notFound } from "./middlewares/notFound.js";
 import { errorMiddleware } from "./middlewares/errorMiddleware.js";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/authRoutes.js";
+import profileRoutes from "./routes/profileRoutes.js";
 import connectToDB from "./config/db.js";
 
 const app = express();
@@ -14,6 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/profile", profileRoutes);
 
 app.use("/api/v1", (req, res) => {
   res.send("API v1 Testing...");

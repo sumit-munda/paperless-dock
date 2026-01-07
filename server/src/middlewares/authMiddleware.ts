@@ -44,7 +44,9 @@ export const verifyAuthentication: ExpressHandler = (
 ) => {
   const token = extractAccessToken(req);
 
-  req.user = token ? (verifyAccessToken(token) as AuthPayload) : null;
+  if (token) {
+    req.user = verifyAccessToken(token) as AuthPayload;
+  }
 
   next();
 };
@@ -55,6 +57,18 @@ export const isAuthenticated = TryCatch(async (req: AuthRequest, res, next) => {
   if (!token) return next(new ErrorHandler("Unauthorized", 401));
 
   const payload = verifyAccessToken(token) as AuthPayload;
+
+  // Fetch user to check status
+  const user = await User.findById(payload.id).select("isActive role");
+
+  if (!user) {
+    return next(new ErrorHandler("User not found", 401));
+  }
+
+  if (!user.isActive) {
+    return next(new ErrorHandler("Account is deactivated", 403));
+  }
+
   req.user = payload;
 
   next();

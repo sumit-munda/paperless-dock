@@ -1,4 +1,5 @@
 import { customAlphabet } from "nanoid";
+import crypto from "crypto";
 
 const Base62Charset: string =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -29,5 +30,6 @@ export const generateUsernameFromEmail = (email: string): string => {
   return username;
 };
 
-
-
+export const hashToken = (token: string) => {
+  return crypto.createHash("sha256").update(token).digest("hex");
+};

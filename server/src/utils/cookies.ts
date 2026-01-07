@@ -10,14 +10,14 @@ export const setAuthCookies = (
   res.cookie("access_token", accessToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: "strict",
+    sameSite: isProd ? "none" : "lax",
     maxAge: 15 * 60 * 1000,
   });
 
   res.cookie("refresh_token", refreshToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: "strict",
+    sameSite: isProd ? "none" : "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000,
   });
 };
