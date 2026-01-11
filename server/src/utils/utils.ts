@@ -5,14 +5,12 @@ const Base62Charset: string =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 export const generateFirebaseLikeId = customAlphabet(Base62Charset, 28);
 
-export function generatePhotoFromInitials(name?: string): string | undefined {
-  if (!name) return undefined;
+export function generatePhotoFromInitials(
+  username?: string
+): string | undefined {
+  if (!username) return undefined;
 
-  const initials = name
-    .split(" ")
-    .map((n: string) => n[0])
-    .join("")
-    .toUpperCase();
+  const initials = username.slice(0, 2).toUpperCase();
 
   return `https://api.dicebear.com/7.x/initials/svg?seed=${initials}`;
 }

@@ -15,6 +15,7 @@ const router = Router();
 router.post("/register", registerUserWithCredentials);
 router.post("/google", registerUserWithGoogle);
 router.post("/login", loginUser); // Login (email + password)
+router.post("/google", loginUser); // Login (google)
 router.post("/refresh", refreshAccessToken);
 router.post("/logout", isAuthenticated, logoutUser);
 router.post("/forgot-password", forgotPassword);

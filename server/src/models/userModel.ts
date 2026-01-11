@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema<IUser>(
     },
     name: {
       type: String,
-      required: [true, "Please enter name"],
+      default: "",
       trim: true,
     },
     username: {
@@ -61,8 +61,8 @@ const userSchema = new mongoose.Schema<IUser>(
     },
     photo: {
       type: String,
-      default: function (this: { name?: string }) {
-        return generatePhotoFromInitials(this.name);
+      default: function (this: { username?: string }) {
+        return generatePhotoFromInitials(this.username);
       },
     },
     role: {
