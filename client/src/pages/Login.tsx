@@ -11,8 +11,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/auth.context";
+import { useLoginGoogleMutation, useLoginMutation } from "@/redux/api/authApi";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const Login = () => {
   const [form, setForm] = useState({
@@ -21,7 +23,13 @@ const Login = () => {
   });
 
   const navigate = useNavigate();
-  const { signinWithEmailAndPassword, signinWithGoogle, loading } = useAuth();
+
+  // Firebase
+  const { signinWithGoogle, loading } = useAuth();
+
+  // Backend
+  const [login, { isLoading }] = useLoginMutation();
+  const [loginGoogle] = useLoginGoogleMutation();
 
   const onChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -29,17 +37,47 @@ const Login = () => {
 
   const onSubmitHandler = async (e: FormEvent) => {
     e.preventDefault();
-    const res = await signinWithEmailAndPassword(form.email, form.password);
-    console.log(res);
 
-    navigate("/");
+    try {
+      const res = await login({
+        email: form.email,
+        password: form.password,
+      }).unwrap();
+
+      if (!res?.user) {
+        throw new Error("Sign-in failed");
+      }
+
+      toast.success("Sign-in successful 🚀");
+      navigate("/login");
+    } catch (error:any) {
+      console.error(error);
+
+      toast.error(error?.message || "Something went wrong. Please try again.");
+    }
   };
 
   const signinWithGoogleHandler = async () => {
-    const res = await signinWithGoogle();
-    console.log(res);
+   try {
+      const firebaseRes = await signinWithGoogle();
 
-    navigate("/");
+      if (!firebaseRes?.user) {
+        throw new Error("Google sign-in failed");
+      }
+
+       await loginGoogle({
+        email: firebaseRes.user.email,
+        googleId: firebaseRes.user.uid,
+        name: firebaseRes.user.displayName || undefined,
+        photo: firebaseRes.user.photoURL || undefined,
+      }).unwrap();
+
+      toast.success("Signed in with Google 🚀");
+      navigate("/");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.message || "Google signin failed. Try again");
+    }
   };
 
   return (
@@ -106,7 +144,12 @@ const Login = () => {
         </CardContent>
 
         <CardFooter className="flex-col gap-2">
-          <Button type="submit" className="w-full" disabled={loading} onClick={onSubmitHandler}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isLoading}
+            onClick={onSubmitHandler}
+          >
             Login
           </Button>
           <Button

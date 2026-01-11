@@ -25,7 +25,7 @@ const Register = () => {
   const navigate = useNavigate();
 
   // Firebase
-  // const { signupWithEmailAndPassword, signinWithGoogle, loading } = useAuth();
+  const { signinWithGoogle, loading } = useAuth();
 
   // Backend
   const [register, { isLoading }] = useRegisterMutation();
@@ -38,23 +38,16 @@ const Register = () => {
     e.preventDefault();
 
     try {
-      // const firebaseRes = await signupWithEmailAndPassword(
-      //   form.email,
-      //   form.password
-      // );
+      const res = await register({
+        email: form.email,
+        password: form.password,
+      }).unwrap();
 
-      // if (!firebaseRes?.user) {
-      //   throw new Error("Firebase signup failed");
-      // }
+      if (!res?.user) {
+        throw new Error("Sign-up failed");
+      }
 
-      // await register({
-      //   email: firebaseRes.user.email,
-      //   firebaseUid: firebaseRes.user.uid,
-      // }).unwrap();
-
-      await register(form).unwrap();
-
-      toast.success("Account created successfully 🎉");
+      toast.success("Account created successfully 🎉 Please log in");
       navigate("/login");
     } catch (error: any) {
       console.error(error);
@@ -65,20 +58,18 @@ const Register = () => {
 
   const signinWithGoogleHandler = async () => {
     try {
-      // const firebaseRes = await signinWithGoogle();
+      const firebaseRes = await signinWithGoogle();
 
-      // if (!firebaseRes?.user) {
-      //   throw new Error("Google sign-in failed");
-      // }
+      if (!firebaseRes?.user) {
+        throw new Error("Google sign-in failed");
+      }
 
-      await register(form).unwrap();
-
-      // await register({
-      //   email: firebaseRes.user.email,
-      //   firebaseUid: firebaseRes.user.uid,
-      //   name: firebaseRes.user.displayName,
-      //   avatar: firebaseRes.user.photoURL,
-      // }).unwrap();
+      await register({
+        email: firebaseRes.user.email,
+        googleId: firebaseRes.user.uid,
+        name: firebaseRes.user.displayName || undefined,
+        photo: firebaseRes.user.photoURL || undefined,
+      }).unwrap();
 
       toast.success("Signed up with Google 🚀");
       navigate("/");
@@ -146,14 +137,19 @@ const Register = () => {
         </CardContent>
 
         <CardFooter className="flex-col gap-2">
-          <Button type="submit" disabled={isLoading} className="w-full" onClick={onSubmitHandler}>
-           {isLoading ? "Creating..." : "Create account"}
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="w-full"
+            onClick={onSubmitHandler}
+          >
+            {isLoading ? "Creating..." : "Create account"}
           </Button>
           <Button
             variant="outline"
             className="w-full"
             onClick={signinWithGoogleHandler}
-            disabled={isLoading}
+            disabled={loading}
           >
             Continue with Google
           </Button>

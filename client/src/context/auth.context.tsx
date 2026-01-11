@@ -1,9 +1,7 @@
 import { firebaseAuth } from "@/firebase/firebase.auth";
 import {
-  signupWithEmailAndPassword,
-  signinWithEmailAndPassword,
-  signinWithGoogle,
   logout,
+  signinWithGoogle
 } from "@/services/auth.service";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import {
@@ -18,8 +16,6 @@ type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
-  signupWithEmailAndPassword: (email: string, password: string) => Promise<any>;
-  signinWithEmailAndPassword: (email: string, password: string) => Promise<any>;
   signinWithGoogle: () => Promise<any>;
   logout: () => Promise<void>;
 };
@@ -45,8 +41,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         isAuthenticated: !!user,
         loading,
-        signupWithEmailAndPassword,
-        signinWithEmailAndPassword,
         signinWithGoogle,
         logout,
       }}
