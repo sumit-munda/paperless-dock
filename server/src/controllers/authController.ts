@@ -1,5 +1,4 @@
 import { User } from "../models/userModel.js";
-import { AuthRequest } from "../types/types.js";
 import { TryCatch } from "../utils/asyncHandler.js";
 import { setAuthCookies } from "../utils/cookies.js";
 import { ErrorHandler } from "../utils/errorHandler.js";
@@ -9,9 +8,11 @@ import {
   verifyRefreshToken,
 } from "../utils/jwt.js";
 
+import crypto from "crypto";
 import { Request, Response } from "express";
-import { ForgotPasswordDTO, LoginUserDTO } from "../dtos/auth.dto.js";
 import {
+  ForgotPasswordDTO,
+  LoginUserDTO,
   RegisterUserCredentialsDTO,
   RegisterUserGoogleDTO,
 } from "../dtos/auth.dto.js";
@@ -19,14 +20,13 @@ import { getUserByEmail } from "../services/user.service.js";
 import { clearAuthCookies } from "../utils/cookies.js";
 import { hashPassword, verifyPassword } from "../utils/password.js";
 import { hashToken } from "../utils/utils.js";
-import crypto from "crypto";
 
 export const registerUserWithCredentials = TryCatch(
   async (req: Request<{}, {}, RegisterUserCredentialsDTO>, res, next) => {
-    const { name, email, password } = req.body;
+    const { email, password } = req.body;
 
     // Validate required fields
-    if (!name || !email || !password) {
+    if (!email || !password) {
       return next(new ErrorHandler("Please fill in all required fields", 400));
     }
 
@@ -37,7 +37,6 @@ export const registerUserWithCredentials = TryCatch(
 
     // Create user
     await User.create({
-      name: name.trim(),
       email: email.toLowerCase().trim(),
       password: await hashPassword(password),
       provider: "credentials",
@@ -61,7 +60,7 @@ export const registerUserWithGoogle = TryCatch(
 
     // Create user
     await User.create({
-      name: name.trim(),
+      name: name?.trim() || "",
       email: email.toLowerCase().trim(),
       googleId,
       provider: "google",
@@ -85,9 +84,9 @@ export const loginUser = TryCatch(
     }
 
     // Find user
-    const user = await User.findOne({ email: email.trim().toLowerCase() }).select(
-      "+password"
-    );
+    const user = await User.findOne({
+      email: email.trim().toLowerCase(),
+    }).select("+password");
     if (!user || user.provider !== "credentials") {
       return next(new ErrorHandler("Invalid credentials", 401));
     }
@@ -124,6 +123,50 @@ export const loginUser = TryCatch(
   }
 );
 
+export const loginUserWithGoogle = TryCatch(async (req, res, next) => {
+  const { email, googleId, name, photo } = req.body;
+
+  if (!email || !googleId) {
+    return next(new ErrorHandler("Invalid Google login data", 400));
+  }
+
+  let user = await User.findOne({ email });
+
+  // If user doesn't exist → create
+  if (!user) {
+    user = await User.create({
+      email: email.toLowerCase().trim(),
+      googleId,
+      provider: "google",
+      name: name?.trim() || "",
+      photo,
+    });
+  }
+
+  // Block deactivated users
+  if (!user.isActive) {
+    return next(new ErrorHandler("Account is deactivated", 403));
+  }
+
+  // Generate tokens
+  const accessToken = generateAccessToken({
+    id: user.id,
+    role: user.role,
+  });
+
+  const refreshToken = generateRefreshToken({
+    id: user.id,
+  });
+
+  setAuthCookies(res, accessToken, refreshToken);
+
+  res.status(200).json({
+    success: true,
+    message: "Google login successful",
+  });
+});
+
+
 export const logoutUser = (req: Request, res: Response) => {
   clearAuthCookies(res);
 
@@ -133,38 +176,36 @@ export const logoutUser = (req: Request, res: Response) => {
   });
 };
 
-export const refreshAccessToken = TryCatch(
-  async (req, res, next) => {
-    const token = req.cookies?.refresh_token;
-    if (!token) throw new ErrorHandler("Unauthorized", 401);
+export const refreshAccessToken = TryCatch(async (req, res, next) => {
+  const token = req.cookies?.refresh_token;
+  if (!token) throw new ErrorHandler("Unauthorized", 401);
 
-    let payload: { id: string };
-    try {
-      payload = verifyRefreshToken(token) as { id: string };
-    } catch {
-      throw new ErrorHandler("Invalid or expired refresh token", 401);
-    }
-
-    const user = await User.findById(payload.id);
-    if (!user) throw new ErrorHandler("User not found", 401);
-
-    // Generate new tokens
-    const accessToken = generateAccessToken({
-      id: user.id,
-      role: user.role,
-    });
-
-    const refreshToken = generateRefreshToken({ id: user.id });
-
-    // Set cookies
-    setAuthCookies(res, accessToken, refreshToken);
-
-    res.status(200).json({
-      success: true,
-      message: "Access token refreshed",
-    });
+  let payload: { id: string };
+  try {
+    payload = verifyRefreshToken(token) as { id: string };
+  } catch {
+    throw new ErrorHandler("Invalid or expired refresh token", 401);
   }
-);
+
+  const user = await User.findById(payload.id);
+  if (!user) throw new ErrorHandler("User not found", 401);
+
+  // Generate new tokens
+  const accessToken = generateAccessToken({
+    id: user.id,
+    role: user.role,
+  });
+
+  const refreshToken = generateRefreshToken({ id: user.id });
+
+  // Set cookies
+  setAuthCookies(res, accessToken, refreshToken);
+
+  res.status(200).json({
+    success: true,
+    message: "Access token refreshed",
+  });
+});
 
 export const forgotPassword = TryCatch(
   async (req: Request<{}, {}, ForgotPasswordDTO>, res, next) => {
