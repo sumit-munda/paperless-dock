@@ -4,6 +4,7 @@ import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 import Home from "./pages/Home";
 import { Toaster } from "./components/ui/sonner";
+import Profile from "./pages/Profile";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -18,6 +19,10 @@ const App = () => {
     {
       element: <Register />,
       path: "/register",
+    },
+    {
+      element: <Profile />,
+      path: "/profile",
     },
     {
       element: <NotFound />,
