@@ -1,7 +1,7 @@
 import { DoorClosedLocked, Search } from "lucide-react";
 import { useState } from "react";
 import { GiLighthouse } from "react-icons/gi";
-import { HiHomeModern } from "react-icons/hi2";
+import { HiHomeModern, HiOutlineHomeModern } from "react-icons/hi2";
 import { LuDoorOpen, LuSettings } from "react-icons/lu";
 import { PiUserFocusBold } from "react-icons/pi";
 import { useNavigate } from "react-router-dom";
@@ -38,19 +38,19 @@ const MobileNav = () => {
   const [theme, setTheme] = useState({});
 
   return (
-    <header className="flex items-end justify-between p-2 md:hidden">
+    <header className="flex items-end justify-between px-4 py-2 md:hidden">
       <div className="flex items-end">
         {/* Hamburger Menu */}
         <SheetHamburger />
       </div>
 
-      <div className="flex gap-1.5">
+      <div className="flex items-center gap-1">
         <DialogMobSearch />
 
         {/* Theme Toggle */}
         <Button
           variant="unstyled"
-          size={"icon-sm"}
+          size={"icon-lg"}
           onClick={() => setTheme(theme === "light" ? "dark" : "light")}
         >
           {theme === "light" ? <GiLighthouse /> : <GiLighthouse />}
@@ -70,8 +70,8 @@ const SheetHamburger = () => {
     <Sheet>
       <SheetTrigger asChild>
         <Button variant="unstyled" size="sm">
-          <img src="./src/assets/logo.png" alt="" className="w-7" />
-          <span className="text-start text-[.5rem]/2 ">
+          <img src="./src/assets/logo.png" alt="" className="w-8" />
+          <span className="text-start text-[.6rem]/2.5 ">
             The <br /> Paperless <br /> Dock
           </span>
         </Button>
@@ -80,7 +80,7 @@ const SheetHamburger = () => {
         <div className="flex-col justify-between items-center">
           <h2 className="text-sm text-neutral-500 font-semibold mb-4">Menu</h2>
           {/* Your menu items */}
-          <nav className="space-y-2">
+          <nav className="space-y-1 text-lg">
             <a href="/" className="block">
               Home
             </a>
@@ -93,7 +93,7 @@ const SheetHamburger = () => {
           </nav>
         </div>
 
-        <Button>
+        <Button size={"lg"}>
           <DoorClosedLocked />
           Logout
         </Button>
@@ -106,13 +106,9 @@ const DialogMobSearch = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button
-          variant="outstyled"
-          size="sm"
-          className="flex items-center gap-2"
-        >
+        <Button variant="outstyled" className="flex items-center gap-2">
           <Search className="h-4 w-4" />
-          <span className="hidden min-[322px]:inline">Search...</span>
+          <span className="hidden min-[376px]:inline">Search...</span>
         </Button>
       </DialogTrigger>
 
@@ -162,7 +158,10 @@ const DialogMobSearch = () => {
 
           {/* Footer */}
           <div className="border-t px-3 py-2 text-xs text-muted-foreground">
-            Press <kbd className="rounded border px-1">Enter</kbd> to open
+            <span className="hidden sm:inline">
+              Press <kbd className="rounded border px-1">Enter</kbd> to open
+            </span>
+            <span className="sm:hidden">Tap a result to open</span>
           </div>
         </Command>
       </DialogContent>
@@ -178,13 +177,13 @@ const DropdownMenuMob = () => {
   return isLogin ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size={"sm"}>@ Profile</Button>
+        <Button>@ Profile</Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => navigate("/register")}>
-            <HiHomeModern className="text-neutral-700" />
-            Create
+            <HiOutlineHomeModern className="text-neutral-700" />
+            Create 
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate("/login")}>
             <LuDoorOpen className="text-neutral-700" />
@@ -194,7 +193,7 @@ const DropdownMenuMob = () => {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => navigate("/register")}>
-            <HiHomeModern className="text-neutral-700" />
+            <LuSettings className="text-neutral-700" />
             Settings
           </DropdownMenuItem>
         </DropdownMenuGroup>
@@ -204,7 +203,7 @@ const DropdownMenuMob = () => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Avatar
-          className=" h-8 w-8
+          className=" h-10 w-10
     ring-2 ring-background
     grayscale"
         >
@@ -216,14 +215,15 @@ const DropdownMenuMob = () => {
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => navigate("/profile")}>
             <Avatar
-              className=" h-8 w-8
+              className=" h-10 w-10
     ring-2 ring-background
     grayscale"
-            onClick={() => navigate("/profile")}>
+              onClick={() => navigate("/profile")}
+            >
               <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
               <AvatarFallback>CN</AvatarFallback>
             </Avatar>
-            <div className="text-[.6rem]">
+            <div className="text-[.8rem]">
               <p>Shad CN</p>
               <p>@shadcn</p>
             </div>

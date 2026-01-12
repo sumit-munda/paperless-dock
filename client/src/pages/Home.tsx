@@ -34,7 +34,7 @@ const Home = () => {
         </div>
 
         <div className="px-8">
-          <img src="./src/assets/hero-image-temp.png" alt="" />
+          <img src="./src/assets/logo.png" alt="" />
         </div>
       </div>
       <Footer/>
