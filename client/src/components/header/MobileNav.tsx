@@ -70,7 +70,7 @@ const SheetHamburger = () => {
     <Sheet>
       <SheetTrigger asChild>
         <Button variant="unstyled" size="sm">
-          <img src="./src/assets/logo.png" alt="" className="w-8" />
+          <img src="./src/assets/logo.png" alt="logo" className="w-8" />
           <span className="text-start text-[.6rem]/2.5 ">
             The <br /> Paperless <br /> Dock
           </span>
@@ -179,15 +179,15 @@ const DropdownMenuMob = () => {
       <DropdownMenuTrigger asChild>
         <Button>@ Profile</Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40">
+      <DropdownMenuContent align="end" className="w-45">
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => navigate("/register")}>
             <HiOutlineHomeModern className="text-neutral-700" />
-            Create 
+            Create Account
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate("/login")}>
             <LuDoorOpen className="text-neutral-700" />
-            Login
+            Login to Account
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

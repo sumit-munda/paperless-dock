@@ -4,7 +4,10 @@ import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 import Home from "./pages/Home";
 import { Toaster } from "./components/ui/sonner";
-import Profile from "./pages/Profile";
+import Profile from "./pages/profile/Profile";
+import EditProfile from "./pages/profile/EditProfile/EditProfileLayout";
+import { AppLayout } from "./layouts/AppLayout";
+import EditProfilePage from "./pages/profile/EditProfile/EditProfilePage";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -25,6 +28,10 @@ const App = () => {
       path: "/profile",
     },
     {
+      element: <EditProfilePage />,
+      path: "/profile/edit",
+    },
+    {
       element: <NotFound />,
       path: "*",
     },
@@ -32,7 +39,7 @@ const App = () => {
   return (
     <>
       <RouterProvider router={router} />
-      <Toaster/>
+      <Toaster />
     </>
   );
 };
