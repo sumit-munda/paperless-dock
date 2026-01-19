@@ -58,6 +58,16 @@ const EditProfileSheet = ({
         <Button
           variant="unstyled"
           className="justify-start"
+          onClick={() => onSelect("account")}
+        >
+          Account
+        </Button>
+      </SheetClose>
+
+      <SheetClose asChild>
+        <Button
+          variant="unstyled"
+          className="justify-start"
           onClick={() => onSelect("security")}
         >
           Security
@@ -68,9 +78,29 @@ const EditProfileSheet = ({
         <Button
           variant="unstyled"
           className="justify-start"
+          onClick={() => onSelect("subscription")}
+        >
+          Subscription
+        </Button>
+      </SheetClose>
+
+      <SheetClose asChild>
+        <Button
+          variant="unstyled"
+          className="justify-start"
           onClick={() => onSelect("preferences")}
         >
           Preferences
+        </Button>
+      </SheetClose>
+
+      <SheetClose asChild>
+        <Button
+          variant="unstyled"
+          className="justify-start"
+          onClick={() => onSelect("settings")}
+        >
+          Settings
         </Button>
       </SheetClose>
 

@@ -13,6 +13,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EditProfileSheet from "./EditProfile/EditProfileSheet";
 import { useState } from "react";
 import EditProfileForm from "./EditProfile/EditProfileForm";
+import EditPreferencesForm from "./EditProfile/EditPreferencesForm";
+import EditSecurityForm from "./EditProfile/EditSecurityForm";
+import EditAccountForm from "./EditProfile/EditAccountForm";
+import EditSettings from "./EditProfile/EditSettings";
+import EditSubscriptionForm from "./EditProfile/EditSubscriptionForm";
 
 export type Payment = {
   id: string;
@@ -30,7 +35,7 @@ const data: Payment[] = [
   },
 ];
 
-export type Section = "tabs" | "profile" | "security" | "preferences";
+export type Section = "tabs" | "profile" | "account"| "security" | "subscription"| "preferences" | "settings";
 
 const Profile = () => {
   const [section, setSection] = useState<Section>("tabs");
@@ -60,7 +65,7 @@ const Profile = () => {
         <div>
           <div className="flex justify-center gap-2 p-2">
             {section === "tabs" && (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 w-full">
                 <Tabs defaultValue="account">
                   <TabsList className="w-full">
                     <TabsTrigger value="library">Library</TabsTrigger>
@@ -185,6 +190,11 @@ const Profile = () => {
             )}
 
             {section === "profile" && <EditProfileForm />}
+            {section === "account" && <EditAccountForm />}
+            {section === "security" && <EditSecurityForm />}
+            {section === "subscription" && <EditSubscriptionForm />}
+            {section === "preferences" && <EditPreferencesForm />}
+            {section === "settings" && <EditSettings />}
           </div>
         </div>
       </div>

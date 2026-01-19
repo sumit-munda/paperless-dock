@@ -56,7 +56,7 @@ const MobileNav = () => {
           {theme === "light" ? <GiLighthouse /> : <GiLighthouse />}
         </Button>
 
-        {/* Dropdown Menu */}
+        {/* Dropdown Menu in Mob */}
         <DropdownMenuMob />
       </div>
     </header>
@@ -65,7 +65,7 @@ const MobileNav = () => {
 
 export default MobileNav;
 
-const SheetHamburger = () => {
+export const SheetHamburger = () => {
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -102,13 +102,18 @@ const SheetHamburger = () => {
   );
 };
 
-const DialogMobSearch = () => {
+export const DialogMobSearch = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
         <Button variant="outstyled" className="flex items-center gap-2">
           <Search className="h-4 w-4" />
-          <span className="hidden min-[376px]:inline">Search...</span>
+          <span className="hidden min-[376px]:inline min-[769px]:hidden">
+            Search…
+          </span>
+          <span className="hidden min-[769px]:inline">
+            Search books by genre or category…
+          </span>
         </Button>
       </DialogTrigger>
 
@@ -169,10 +174,10 @@ const DialogMobSearch = () => {
   );
 };
 
-const DropdownMenuMob = () => {
+export const DropdownMenuMob = () => {
   const navigate = useNavigate();
 
-  const isLogin = false;
+  const isLogin = true;
 
   return isLogin ? (
     <DropdownMenu>
