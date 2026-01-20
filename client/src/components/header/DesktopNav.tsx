@@ -56,10 +56,10 @@ const DesktopNav = () => {
 
           {/* Desktop only */}
           <div className="hidden min-[769px]:flex gap-2">
-            <Button variant="unstyled" size="sm">
+            <Button variant="unstyled" size="sm" onClick={() => navigate("/register")}>
               Create Account
             </Button>
-            <Button size="sm">Login to Account</Button>
+            <Button size="sm" onClick={() => navigate("/login")}>Login to Account</Button>
           </div>
         </div>
       </header>

@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const Register = () => {
+   // Local form state for controlled inputs
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -24,60 +25,81 @@ const Register = () => {
 
   const navigate = useNavigate();
 
-  // Firebase
-  const { signinWithGoogle, loading } = useAuth();
+   // Firebase auth helpers (Google sign-in)
+  const { signinWithGoogle, loading: firebaseLoading  } = useAuth();
 
-  // Backend
-  const [register, { isLoading }] = useRegisterMutation();
+  // Backend registration mutation
+  const [register, { isLoading: apiLoading }] = useRegisterMutation();
 
+  
+  // Handles input field updates
   const onChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+    // Handles email/password registration flow
   const onSubmitHandler = async (e: FormEvent) => {
     e.preventDefault();
 
     try {
+        // Send credentials to backend for registration
       const res = await register({
         email: form.email,
         password: form.password,
+        provider: "credentials"
       }).unwrap();
 
+         // Ensure backend actually created the user
       if (!res?.user) {
-        throw new Error("Sign-up failed");
+        throw new Error("User creation failed");
       }
 
+       // Confirms backend auth flow is working
       toast.success("Account created successfully 🎉 Please log in");
       navigate("/login");
     } catch (error: any) {
-      console.error(error);
+      console.error("REGISTER ERROR:",error);
 
-      toast.error(error?.message || "Something went wrong. Please try again.");
+      toast.error(error?.data?.message || error?.message || "Something went wrong. Please try again.");
     }
   };
 
+   // Handles Google sign-up using Firebase + backend sync
   const signinWithGoogleHandler = async () => {
     try {
+           // Authenticate user with Google via Firebase
       const firebaseRes = await signinWithGoogle();
 
       if (!firebaseRes?.user) {
-        throw new Error("Google sign-in failed");
+        throw new Error("Google authentication failed");
       }
 
-      await register({
+       // Register or sync Google user with backend
+      const res = await register({
         email: firebaseRes.user.email,
         googleId: firebaseRes.user.uid,
         name: firebaseRes.user.displayName || undefined,
         photo: firebaseRes.user.photoURL || undefined,
+        provider: "google"
       }).unwrap();
 
+      if(!res?.user) {
+        throw new Error('Backend Google signup failed')
+      }
+
+        // Confirms Firebase → Backend auth pipeline works
       toast.success("Signed up with Google 🚀");
       navigate("/");
     } catch (error: any) {
-      console.error(error);
-      toast.error(error?.message || "Google signup failed. Try again");
+      console.error("GOOGLE SIGNUP ERROR:", error);
+
+      toast.error( error?.data?.message ||error?.message || "Google signup failed. Try again");
     }
   };
+
+    // Combined loading state to prevent double submits
+  const isLoading = apiLoading || firebaseLoading;
+
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6">
@@ -149,7 +171,7 @@ const Register = () => {
             variant="outline"
             className="w-full"
             onClick={signinWithGoogleHandler}
-            disabled={loading}
+            disabled={isLoading}
           >
             Continue with Google
           </Button>

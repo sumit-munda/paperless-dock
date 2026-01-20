@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const Login = () => {
+   // Local state for controlled form inputs
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -24,61 +25,84 @@ const Login = () => {
 
   const navigate = useNavigate();
 
-  // Firebase
-  const { signinWithGoogle, loading } = useAuth();
+  // Firebase auth helpers (Google sign-in)
+  const { signinWithGoogle, loading: firebaseLoading } = useAuth();
 
-  // Backend
-  const [login, { isLoading }] = useLoginMutation();
+ // Backend login mutations
+  const [login, { isLoading: apiLoading }] = useLoginMutation();
   const [loginGoogle] = useLoginGoogleMutation();
 
+   // Updates form fields on input change
   const onChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+    // Handles email/password login flow
   const onSubmitHandler = async (e: FormEvent) => {
     e.preventDefault();
 
     try {
+      // Authenticate user via backend
       const res = await login({
         email: form.email,
         password: form.password,
+        provider :"credentials"
       }).unwrap();
 
-      if (!res?.user) {
-        throw new Error("Sign-in failed");
+       // Ensure backend returned a valid user
+      if (!res?.user || !res?.token) {
+        throw new Error("Login failed");
       }
 
-      toast.success("Sign-in successful 🚀");
-      navigate("/login");
-    } catch (error:any) {
-      console.error(error);
+       // Persist auth token for session handling
+       localStorage.setItem("token", res.token)
 
-      toast.error(error?.message || "Something went wrong. Please try again.");
+      toast.success("Sign-in successful 🚀");
+      navigate("/"); // redirect to protected/home route
+    } catch (error:any) {
+      console.error("LOGIN ERROR:",error);
+
+      toast.error(  error?.data?.message ||error?.message || "Something went wrong. Please try again.");
     }
   };
 
+    // Handles Google login using Firebase + backend sync
   const signinWithGoogleHandler = async () => {
    try {
+      // Authenticate user with Google via Firebase
       const firebaseRes = await signinWithGoogle();
 
       if (!firebaseRes?.user) {
         throw new Error("Google sign-in failed");
       }
 
-       await loginGoogle({
-        email: firebaseRes.user.email,
+       // Login or sync Google user with backend
+       const res = await loginGoogle({
+        email: firebaseRes.user.email!,
         googleId: firebaseRes.user.uid,
         name: firebaseRes.user.displayName || undefined,
         photo: firebaseRes.user.photoURL || undefined,
+        provider: "google"
       }).unwrap();
+
+       if (!res?.token) {
+        throw new Error("Backend Google login failed");
+      }
+
+         // Persist auth token for protected routes
+      localStorage.setItem("token", res.token);
 
       toast.success("Signed in with Google 🚀");
       navigate("/");
     } catch (error: any) {
-      console.error(error);
-      toast.error(error?.message || "Google signin failed. Try again");
+      console.error("GOOGLE LOGIN ERROR:", error);
+
+      toast.error(  error?.data?.message ||error?.message || "Google sign-in failed. Try again");
     }
   };
+
+  // Combined loading state to prevent duplicate actions
+  const isLoading = apiLoading || firebaseLoading;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6">
@@ -156,7 +180,7 @@ const Login = () => {
             variant="outline"
             className="w-full"
             onClick={signinWithGoogleHandler}
-            disabled={loading}
+            disabled={isLoading}
           >
             Login with Google
           </Button>
