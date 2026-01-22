@@ -46,7 +46,7 @@ export const registerUserWithCredentials = TryCatch(
       success: true,
       message: "Registration successful",
     });
-  }
+  },
 );
 
 export const registerUserWithGoogle = TryCatch(
@@ -71,7 +71,7 @@ export const registerUserWithGoogle = TryCatch(
       success: true,
       message: "Google sign-up successful",
     });
-  }
+  },
 );
 
 export const loginUser = TryCatch(
@@ -87,9 +87,12 @@ export const loginUser = TryCatch(
     const user = await User.findOne({
       email: email.trim().toLowerCase(),
     }).select("+password");
+
     if (!user || user.provider !== "credentials") {
       return next(new ErrorHandler("Invalid credentials", 401));
     }
+
+    console.log("success");
 
     // Block login until reset
     if (user.passwordNeedsReset) {
@@ -98,9 +101,13 @@ export const loginUser = TryCatch(
 
     // Compare password
     const isMatch = await verifyPassword(user.password!, password);
+    console.log(isMatch);
+    
     if (!isMatch) {
       return next(new ErrorHandler("Invalid credentials", 401));
     }
+
+      console.log("success2");
 
     // Generate token
     const accessToken = generateAccessToken({
@@ -120,7 +127,7 @@ export const loginUser = TryCatch(
       success: true,
       message: "Login successful",
     });
-  }
+  },
 );
 
 export const loginUserWithGoogle = TryCatch(async (req, res, next) => {
@@ -237,7 +244,7 @@ export const forgotPassword = TryCatch(
       success: true,
       message: "Password reset link sent",
     });
-  }
+  },
 );
 
 export const resetPassword = TryCatch(async (req, res, next) => {

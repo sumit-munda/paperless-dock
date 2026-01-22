@@ -7,6 +7,10 @@ import { extractAccessToken, verifyAccessToken } from "../utils/jwt.js";
 // Role-based access middleware
 export const authorizeRoles = (allowedRoles: string[]) =>
   TryCatch(async (req, res, next) => {
+    if (req.method === "OPTIONS") {
+      return next();
+    }
+
     const id = req.query.id as string | undefined;
 
     if (!id) return next(new ErrorHandler("Please login first", 400));
@@ -19,8 +23,8 @@ export const authorizeRoles = (allowedRoles: string[]) =>
       return next(
         new ErrorHandler(
           `Access denied. Allowed roles: ${allowedRoles.join(", ")}`,
-          403
-        )
+          403,
+        ),
       );
     }
 
@@ -40,8 +44,12 @@ export const userOnly = authorizeRoles(["user"]);
 export const verifyAuthentication: ExpressHandler = (
   req: AuthRequest,
   res,
-  next
+  next,
 ) => {
+  if (req.method === "OPTIONS") {
+    return next();
+  }
+
   const token = extractAccessToken(req);
 
   if (token) {
@@ -53,6 +61,10 @@ export const verifyAuthentication: ExpressHandler = (
 
 // To test Credentials Authentication Middleware
 export const isAuthenticated = TryCatch(async (req: AuthRequest, res, next) => {
+  if (req.method === "OPTIONS") {
+    return next();
+  }
+
   const token = extractAccessToken(req);
   if (!token) return next(new ErrorHandler("Unauthorized", 401));
 
