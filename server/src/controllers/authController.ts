@@ -87,7 +87,7 @@ export const loginUser = TryCatch(
     const user = await User.findOne({
       email: email.trim().toLowerCase(),
     }).select("+password");
-
+    
     if (!user || user.provider !== "credentials") {
       return next(new ErrorHandler("Invalid credentials", 401));
     }
