@@ -42,15 +42,10 @@ const Register = () => {
 
     try {
       // Send credentials to backend for registration
-      const res = await register({
+     await register({
         email: form.email,
         password: form.password,
       }).unwrap();
-
-      // Ensure backend actually created the user
-      if (!res?.user) {
-        throw new Error("User creation failed");
-      }
 
       // Confirms backend auth flow is working
       toast.success("Account created successfully 🎉 Please log in");
@@ -77,16 +72,12 @@ const Register = () => {
       }
 
       // Register or sync Google user with backend
-      const res = await register({
+       await register({
         email: firebaseRes.user.email,
         googleId: firebaseRes.user.uid,
         name: firebaseRes.user.displayName || undefined,
         photo: firebaseRes.user.photoURL || undefined,
       }).unwrap();
-
-      if (!res?.user) {
-        throw new Error("Backend Google signup failed");
-      }
 
       // Confirms Firebase → Backend auth pipeline works
       toast.success("Signed up with Google 🚀");
@@ -130,7 +121,7 @@ const Register = () => {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={onSubmitHandler}>
+          <form id="register-form" onSubmit={onSubmitHandler}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
@@ -167,7 +158,7 @@ const Register = () => {
             type="submit"
             disabled={isLoading}
             className="w-full"
-            onClick={onSubmitHandler}
+             form="register-form"
           >
             {isLoading ? "Creating..." : "Create account"}
           </Button>

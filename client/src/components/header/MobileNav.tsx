@@ -33,6 +33,7 @@ import {
 } from "../ui/dropdown-menu";
 import { Popover, PopoverTrigger } from "../ui/popover";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
+import { logout } from "@/services/auth.service";
 
 const MobileNav = () => {
   const [theme, setTheme] = useState({});
@@ -93,7 +94,7 @@ export const SheetHamburger = () => {
           </nav>
         </div>
 
-        <Button size={"lg"}>
+        <Button size={"lg"} onClick={logout}>
           <DoorClosedLocked />
           Logout
         </Button>
@@ -247,7 +248,7 @@ export const DropdownMenuMob = () => {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => navigate("/register")}>
+          <DropdownMenuItem onClick={logout}>
             <DoorClosedLocked className="text-neutral-700" />
             Logout
           </DropdownMenuItem>

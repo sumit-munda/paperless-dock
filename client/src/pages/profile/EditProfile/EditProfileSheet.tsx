@@ -10,6 +10,7 @@ import {
 import { DoorClosedLocked } from "lucide-react";
 import { FiEdit3 } from "react-icons/fi";
 import type { Section } from "../Profile";
+import { logout } from "@/services/auth.service";
 
 const EditProfileSheet = ({
   onSelect,
@@ -116,7 +117,7 @@ const EditProfileSheet = ({
     </div>
 
     {/* Footer action */}
-    <Button size="lg" variant="destructive">
+    <Button size="lg" variant="destructive" onClick={logout}>
       <DoorClosedLocked />
       Logout
     </Button>

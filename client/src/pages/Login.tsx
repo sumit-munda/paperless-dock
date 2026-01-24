@@ -43,20 +43,10 @@ const Login = () => {
 
     try {
       // Authenticate user via backend
-      const res = await login({
+      await login({
         email: form.email,
         password: form.password,
       }).unwrap();
-
-      console.log(res);
-
-      // Ensure backend returned a valid user
-      if (!res?.user || !res?.token) {
-        throw new Error("Login failed");
-      }
-
-      // Persist auth token for session handling
-      localStorage.setItem("token", res.token);
 
       toast.success("Sign-in successful 🚀");
       navigate("/"); // redirect to protected/home route
@@ -82,19 +72,12 @@ const Login = () => {
       }
 
       // Login or sync Google user with backend
-      const res = await loginGoogle({
+      await loginGoogle({
         email: firebaseRes.user.email!,
         googleId: firebaseRes.user.uid,
         name: firebaseRes.user.displayName || undefined,
         photo: firebaseRes.user.photoURL || undefined,
       }).unwrap();
-
-      if (!res?.token) {
-        throw new Error("Backend Google login failed");
-      }
-
-      // Persist auth token for protected routes
-      localStorage.setItem("token", res.token);
 
       toast.success("Signed in with Google 🚀");
       navigate("/");
@@ -137,7 +120,7 @@ const Login = () => {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={onSubmitHandler}>
+          <form id="login-form" onSubmit={onSubmitHandler}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
@@ -179,8 +162,8 @@ const Login = () => {
           <Button
             type="submit"
             className="w-full"
+            form="login-form"
             disabled={isLoading}
-            onClick={onSubmitHandler}
           >
             Login
           </Button>

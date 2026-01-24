@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field'
+import { logout } from '@/services/auth.service'
 
 const EditSettings = () => {
   return (
@@ -13,7 +14,7 @@ const EditSettings = () => {
         <FieldDescription>
           End your current session on this device.
         </FieldDescription>
-        <Button variant="outline" className="mt-2 w-full">
+        <Button variant="outline" className="mt-2 w-full" onClick={logout}>
           Logout
         </Button>
       </Field>

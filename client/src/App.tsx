@@ -8,6 +8,10 @@ import Profile from "./pages/profile/Profile";
 import EditProfile from "./pages/profile/EditProfile/EditProfileLayout";
 import { AppLayout } from "./layouts/AppLayout";
 import EditProfilePage from "./pages/profile/EditProfile/EditProfilePage";
+import { useGetSessionQuery } from "./redux/api/authApi";
+import { useDispatch } from "react-redux";
+import { useEffect } from "react";
+import { clearUser, setUser } from "./redux/slices/authSlice";
 
 const App = () => {
   const router = createBrowserRouter([
@@ -36,6 +40,18 @@ const App = () => {
       path: "*",
     },
   ]);
+
+  const { data } = useGetSessionQuery();
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (data?.data) {
+      dispatch(setUser(data.data));
+    } else {
+      dispatch(clearUser());
+    }
+  }, [data, dispatch]);
+
   return (
     <>
       <RouterProvider router={router} />

@@ -1,3 +1,4 @@
+import type { SessionResponse } from "@/types/auth.types";
 import { baseApi } from "./baseApi";
 
 export const authApi = baseApi.injectEndpoints({
@@ -26,6 +27,12 @@ export const authApi = baseApi.injectEndpoints({
       }),
     }),
 
+    getSession: builder.query<SessionResponse, void>({
+      query: () => ({
+        url: "/auth/session",
+      }),
+    }),
+
     logout: builder.mutation({
       query: () => ({
         url: "/auth/logout",
@@ -45,6 +52,7 @@ export const {
   useLoginMutation,
   useLoginGoogleMutation,
   useRegisterMutation,
+  useGetSessionQuery,
   useLogoutMutation,
   useRefreshQuery,
 } = authApi;
