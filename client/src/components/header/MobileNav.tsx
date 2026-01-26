@@ -1,9 +1,10 @@
-import { GiLighthouse } from "react-icons/gi";
-
+import type { UserProp } from "@/types/types";
 import { DoorClosedLocked, Search } from "lucide-react";
 import { useState } from "react";
+import { GiLighthouse } from "react-icons/gi";
 import { HiHomeModern } from "react-icons/hi2";
 import { LuDoorOpen } from "react-icons/lu";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import {
   Command,
@@ -27,11 +28,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
-import { useNavigate } from "react-router-dom";
 import { Popover, PopoverTrigger } from "../ui/popover";
+import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 
-const MobileNav = () => {
+const MobileNav = ({ user }: UserProp) => {
   const [theme, setTheme] = useState({});
 
   return (
@@ -53,8 +53,8 @@ const MobileNav = () => {
           {theme === "light" ? <GiLighthouse /> : <GiLighthouse />}
         </Button>
 
-        {/* Dropdown Menu */}
-        <DropdownMenuMob />
+        {/* Dropdown Menu in Mob */}
+        <DropdownMenuMob user={user} />
       </div>
     </header>
   );
@@ -102,7 +102,7 @@ const SheetHamburger = () => {
   );
 };
 
-const DialogMobSearch = () => {
+export const DialogMobSearch = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -170,10 +170,10 @@ const DialogMobSearch = () => {
   );
 };
 
-const DropdownMenuMob = () => {
+export const DropdownMenuMob = ({ user }: UserProp) => {
   const navigate = useNavigate();
 
-  return (
+  return user === null && (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button size={"sm"}>@ Profile</Button>
