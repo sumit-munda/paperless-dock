@@ -1,7 +1,9 @@
+import { logout } from "@/services/auth.service";
+import type { SessionUserInfo } from "@/types/types";
 import { DoorClosedLocked, Search } from "lucide-react";
 import { useState } from "react";
 import { GiLighthouse } from "react-icons/gi";
-import { HiHomeModern, HiOutlineHomeModern } from "react-icons/hi2";
+import { HiOutlineHomeModern } from "react-icons/hi2";
 import { LuDoorOpen, LuSettings } from "react-icons/lu";
 import { PiUserFocusBold } from "react-icons/pi";
 import { useNavigate } from "react-router-dom";
@@ -33,9 +35,8 @@ import {
 } from "../ui/dropdown-menu";
 import { Popover, PopoverTrigger } from "../ui/popover";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
-import { logout } from "@/services/auth.service";
 
-const MobileNav = () => {
+const MobileNav = ({ user, isAuthenticated }: SessionUserInfo) => {
   const [theme, setTheme] = useState({});
 
   return (
@@ -58,7 +59,7 @@ const MobileNav = () => {
         </Button>
 
         {/* Dropdown Menu in Mob */}
-        <DropdownMenuMob />
+        <DropdownMenuMob user={user} isAuthenticated={isAuthenticated} />
       </div>
     </header>
   );
@@ -175,12 +176,10 @@ export const DialogMobSearch = () => {
   );
 };
 
-export const DropdownMenuMob = () => {
+export const DropdownMenuMob = ({ user, isAuthenticated }: SessionUserInfo) => {
   const navigate = useNavigate();
 
-  const isLogin = true;
-
-  return isLogin ? (
+  return isAuthenticated === false && user === null ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button>@ Profile</Button>

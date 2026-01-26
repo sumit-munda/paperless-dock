@@ -1,19 +1,32 @@
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import NotFound from "./pages/NotFound";
-import Home from "./pages/Home";
-import { Toaster } from "./components/ui/sonner";
-import Profile from "./pages/profile/Profile";
-import EditProfile from "./pages/profile/EditProfile/EditProfileLayout";
-import { AppLayout } from "./layouts/AppLayout";
-import EditProfilePage from "./pages/profile/EditProfile/EditProfilePage";
-import { useGetSessionQuery } from "./redux/api/authApi";
+import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { useEffect } from "react";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { Toaster } from "./components/ui/sonner";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import NotFound from "./pages/NotFound";
+import EditProfilePage from "./pages/profile/EditProfile/EditProfilePage";
+import Profile from "./pages/profile/Profile";
+import Register from "./pages/Register";
+import { useGetSessionQuery } from "./redux/api/authApi";
 import { clearUser, setUser } from "./redux/slices/authSlice";
+import { useAppSelector } from "./redux/hooks";
+import type { RootState } from "./redux/store";
 
 const App = () => {
+  const { shouldFetch } = useAppSelector((state: RootState) => state.session);
+
+  const { data } = useGetSessionQuery(undefined, { skip: !shouldFetch });
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (data?.data) {
+      dispatch(setUser(data.data));
+    } else {
+      dispatch(clearUser());
+    }
+  }, [data]);
+
   const router = createBrowserRouter([
     {
       element: <Home />,
@@ -40,17 +53,6 @@ const App = () => {
       path: "*",
     },
   ]);
-
-  const { data } = useGetSessionQuery();
-  const dispatch = useDispatch();
-
-  useEffect(() => {
-    if (data?.data) {
-      dispatch(setUser(data.data));
-    } else {
-      dispatch(clearUser());
-    }
-  }, [data, dispatch]);
 
   return (
     <>

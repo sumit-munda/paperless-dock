@@ -1,5 +1,7 @@
 import { firebaseAuth, googleProvider } from "@/firebase/firebase.auth";
+import { baseApi } from "@/redux/api/baseApi";
 import { clearUser } from "@/redux/slices/authSlice";
+import { disableFetch } from "@/redux/slices/sessionSlice";
 import { store } from "@/redux/store";
 import { signInWithPopup, signOut } from "firebase/auth";
 import { toast } from "sonner";
@@ -10,31 +12,23 @@ export const signinWithGoogle = () => {
 
 export const logout = async () => {
   try {
-    // Clear Redux auth state
+     // 1. Clear Redux state
     store.dispatch(clearUser());
+    store.dispatch(disableFetch());
+    store.dispatch(baseApi.util.resetApiState());
 
-    // Logout from firebase if logged in
-    try {
-      await signOut(firebaseAuth);
-      toast("Logged out successfully");
-    } catch (firebaseErr) {
-      console.warn("Firebase logout failed", firebaseErr);
-      toast.error("Logout failed");
-    }
+    // 2. Firebase logout (Google auth)
+    await signOut(firebaseAuth).catch(() => {});
 
-    // Call backend to clear cookies (credentials auth)
-    try {
-      await fetch("http://localhost:5000/api/v1/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-      toast.success("Logged out successfully");
-    } catch (backendErr) {
-      console.warn("Backend logout failed", backendErr);
-      toast.error("Logout failed");
-    }
+    // 3. Backend logout (credentials auth)
+    await fetch("http://localhost:5000/api/v1/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
 
-    // Redirect to login page
+    toast.success("Logged out successfully");
+
+    // 4. Redirect
     window.location.href = "/";
   } catch (err) {
     console.error("Logout failed", err);

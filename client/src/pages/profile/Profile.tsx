@@ -18,6 +18,7 @@ import EditSecurityForm from "./EditProfile/EditSecurityForm";
 import EditAccountForm from "./EditProfile/EditAccountForm";
 import EditSettings from "./EditProfile/EditSettings";
 import EditSubscriptionForm from "./EditProfile/EditSubscriptionForm";
+import { useGetProfileQuery } from "@/redux/api/profileApi";
 
 export type Payment = {
   id: string;
@@ -35,10 +36,20 @@ const data: Payment[] = [
   },
 ];
 
-export type Section = "tabs" | "profile" | "account"| "security" | "subscription"| "preferences" | "settings";
+export type Section =
+  | "tabs"
+  | "profile"
+  | "account"
+  | "security"
+  | "subscription"
+  | "preferences"
+  | "settings";
 
 const Profile = () => {
   const [section, setSection] = useState<Section>("tabs");
+
+  const { data, isLoading, error } = useGetProfileQuery();
+  console.log(data);
 
   return (
     <div>

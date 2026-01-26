@@ -9,3 +9,8 @@ export type MessageResponse = {
   success: boolean;
   message: string;
 };
+
+export type DataResponse<T> = {
+  success: boolean;
+  data: T
+}

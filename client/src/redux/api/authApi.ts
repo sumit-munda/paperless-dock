@@ -1,4 +1,4 @@
-import type { SessionResponse } from "@/types/auth.types";
+import type { SessionResponse } from "@/types/api.types";
 import { baseApi } from "./baseApi";
 
 export const authApi = baseApi.injectEndpoints({
