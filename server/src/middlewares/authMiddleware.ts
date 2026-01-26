@@ -70,7 +70,7 @@ export const isAuthenticated = TryCatch(async (req: AuthRequest, res, next) => {
 
   const payload = verifyAccessToken(token) as AuthPayload;
 
-  // Fetch user to check status
+  // Validate user existence & status
   const user = await User.findById(payload.id).select("isActive role");
 
   if (!user) {
@@ -81,7 +81,11 @@ export const isAuthenticated = TryCatch(async (req: AuthRequest, res, next) => {
     return next(new ErrorHandler("Account is deactivated", 403));
   }
 
-  req.user = payload;
+  // Attach only safe, verified payload
+  req.user = {
+    id: payload.id,
+    role: user.role,
+  };
 
   next();
 });

@@ -37,5 +37,19 @@ export const verifyRefreshToken = (token: string): JwtPayload => {
 
 // Extract Access Token
 export const extractAccessToken = (req: AuthRequest) => {
-  return req.cookies?.access_token || null;
+  // Check Authorization header
+  if (req.headers.authorization?.startsWith("Bearer ")) {
+    console.log(req.headers.authorization.split(" ")[1]);
+
+    return req.headers.authorization.split(" ")[1];
+  }
+
+  // Check cookie
+  if (req.cookies?.access_token) {
+    console.log(req.cookies?.access_token);
+
+    return req.cookies?.access_token;
+  }
+
+  return null; // no token found
 };

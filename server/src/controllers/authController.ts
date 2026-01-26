@@ -20,6 +20,7 @@ import { getUserByEmail } from "../services/user.service.js";
 import { clearAuthCookies } from "../utils/cookies.js";
 import { hashPassword, verifyPassword } from "../utils/password.js";
 import { hashToken } from "../utils/utils.js";
+import { AuthRequest } from "../types/types.js";
 
 export const registerUserWithCredentials = TryCatch(
   async (req: Request<{}, {}, RegisterUserCredentialsDTO>, res, next) => {
@@ -87,7 +88,6 @@ export const loginUser = TryCatch(
     const user = await User.findOne({
       email: email.trim().toLowerCase(),
     }).select("+password");
-    
     if (!user || user.provider !== "credentials") {
       return next(new ErrorHandler("Invalid credentials", 401));
     }
@@ -101,8 +101,6 @@ export const loginUser = TryCatch(
 
     // Compare password
     const isMatch = await verifyPassword(user.password!, password);
-    console.log(isMatch);
-    
     if (!isMatch) {
       return next(new ErrorHandler("Invalid credentials", 401));
     }
@@ -182,6 +180,19 @@ export const logoutUser = (req: Request, res: Response) => {
     message: "Logged out successfully",
   });
 };
+
+// Returns the currently authenticated user's session identity
+// using JWT extracted from httpOnly cookies.
+export const getSessionUser = TryCatch((req: AuthRequest, res, next) => {
+  if (!req.user) {
+    return next(new ErrorHandler("Not authenticated", 401));
+  }
+
+  res.status(200).json({
+    success: true,
+    data: req.user, // minimal safe user payload
+  });
+});
 
 export const refreshAccessToken = TryCatch(async (req, res, next) => {
   const token = req.cookies?.refresh_token;

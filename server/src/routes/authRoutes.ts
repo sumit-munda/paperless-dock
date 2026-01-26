@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   forgotPassword,
+  getSessionUser,
   loginUser,
   logoutUser,
   refreshAccessToken,
@@ -17,11 +18,12 @@ router.post("/register", registerUserWithCredentials);
 router.post("/google", registerUserWithGoogle);
 router.post("/login", loginUser); // Login (email + password)
 router.post("/google", loginUser); // Login (google)
-router.post("/refresh", refreshAccessToken);
+// router.post("/refresh", refreshAccessToken);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 
 // PROTECTED ROUTES
+router.get("/session", isAuthenticated, getSessionUser);
 router.post("/logout", isAuthenticated, logoutUser);
 
 export default router;

@@ -57,7 +57,7 @@ export interface MulterFile {
 
 export interface AuthPayload {
   id: string;
-  role?: "admin" | "seller" | "user";
+  role: "admin" | "seller" | "user";
 }
 
 export interface AuthRequest extends Request {
