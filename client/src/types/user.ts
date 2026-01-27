@@ -1,12 +1,7 @@
-export type SessionUser = {
-  id: string;
-  role?: "admin" | "seller" | "user";
-};
+// types/user.ts
+// Full user profile returned by backend
 
-export type SessionUserInfo = {
-  user: SessionUser;
-  isAuthenticated: boolean;
-};
+import type { UserRole } from "./auth";
 
 export type UserProfile = {
   id: string;
@@ -17,7 +12,7 @@ export type UserProfile = {
   provider: "credentials" | "google";
   googleId?: string;
   photo: string;
-  role: "admin" | "user" | "seller";
+  role: UserRole;
   subscription: {
     status: "inactive" | "active" | "cancelled";
     stripeCustomerId: string;
@@ -27,22 +22,16 @@ export type UserProfile = {
     country?: string;
   };
   isActive: boolean;
-  lastLoginAt: Date;
   emailVerified: boolean;
   settings: {
     theme: "light" | "dark";
     language: "en" | "hi";
   };
-  createdAt: Date;
-  updatedAt: Date;
+
+  // API sends ISO strings, not Date object
+  lastLoginAt: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
-export type UpdateProfilePayload = {
-  name: string;
-  username: string;
-  bio?: string;
-  location?: {
-    city?: string;
-    country?: string;
-  };
-};
+

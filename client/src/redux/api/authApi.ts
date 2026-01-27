@@ -1,53 +1,76 @@
-import type { SessionResponse } from "@/types/api.types";
+import type { DataResponse, MessageResponse } from "@/types/api";
 import { baseApi } from "./baseApi";
+import type { SessionUser } from "@/types/auth";
+
+// redux/api/authApi.ts
+// RTK Query endpoints for authentication
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    login: builder.mutation({
-      query: (data) => ({
+    // Login with email and password
+    login: builder.mutation<
+      MessageResponse,
+      { email: string; password: string }
+    >({
+      query: (credentials) => ({
         url: "/auth/login",
         method: "POST",
-        body: data,
+        body: credentials,
       }),
+      invalidatesTags: ["user"],
     }),
 
-    loginGoogle: builder.mutation({
+    // Login with Google OAuth token
+    loginGoogle: builder.mutation<MessageResponse, { token: string }>({
       query: (data) => ({
         url: "/auth/google",
         method: "POST",
         body: data,
       }),
+      invalidatesTags: ["user"],
     }),
 
-    register: builder.mutation({
+    // Register a new user account
+    register: builder.mutation<
+      MessageResponse,
+      { email: string; password: string }
+    >({
       query: (data) => ({
         url: "/auth/register",
         method: "POST",
         body: data,
       }),
+      invalidatesTags: ["user"],
     }),
 
-    getSession: builder.query<SessionResponse, void>({
+    // Get current user session
+    getSession: builder.query<DataResponse<SessionUser>, void>({
       query: () => ({
         url: "/auth/session",
       }),
+      providesTags: ["user"],
     }),
 
-    logout: builder.mutation({
+    // Logout the current user
+    logout: builder.mutation<MessageResponse, void>({
       query: () => ({
         url: "/auth/logout",
         method: "POST",
       }),
+      invalidatesTags: ["user"],
     }),
 
-    refresh: builder.query({
+    // Refresh session or token
+    refresh: builder.query<MessageResponse, void>({
       query: () => ({
         url: "/auth/refresh",
       }),
+      providesTags: ["user"],
     }),
   }),
 });
 
+// Export hooks for use in React components
 export const {
   useLoginMutation,
   useLoginGoogleMutation,

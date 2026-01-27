@@ -1,5 +1,5 @@
 import { logout } from "@/services/auth.service";
-import type { SessionUserInfo } from "@/types/types";
+import type { UserProp } from "@/types/types";
 import { DoorClosedLocked, Search } from "lucide-react";
 import { useState } from "react";
 import { GiLighthouse } from "react-icons/gi";
@@ -35,8 +35,13 @@ import {
 } from "../ui/dropdown-menu";
 import { Popover, PopoverTrigger } from "../ui/popover";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
+import type { SessionUser } from "@/types/auth";
 
-const MobileNav = ({ user, isAuthenticated }: SessionUserInfo) => {
+interface Props {
+  user: SessionUser | null;
+}
+
+const MobileNav = ({ user }: Props) => {
   const [theme, setTheme] = useState({});
 
   return (
@@ -59,7 +64,7 @@ const MobileNav = ({ user, isAuthenticated }: SessionUserInfo) => {
         </Button>
 
         {/* Dropdown Menu in Mob */}
-        <DropdownMenuMob user={user} isAuthenticated={isAuthenticated} />
+        <DropdownMenuMob user={user} />
       </div>
     </header>
   );
@@ -176,10 +181,10 @@ export const DialogMobSearch = () => {
   );
 };
 
-export const DropdownMenuMob = ({ user, isAuthenticated }: SessionUserInfo) => {
+export const DropdownMenuMob = ({ user }: UserProp) => {
   const navigate = useNavigate();
 
-  return isAuthenticated === false && user === null ? (
+  return user === null ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button>@ Profile</Button>

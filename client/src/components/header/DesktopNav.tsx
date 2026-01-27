@@ -1,4 +1,5 @@
 import { logout } from "@/services/auth.service";
+import type { SessionUser } from "@/types/auth";
 import { DoorClosedLocked } from "lucide-react";
 import { useState } from "react";
 import { GiLighthouse } from "react-icons/gi";
@@ -16,9 +17,12 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { DialogMobSearch, DropdownMenuMob } from "./MobileNav";
-import type { SessionUserInfo } from "@/types/types";
 
-const DesktopNav = ({ user, isAuthenticated }: SessionUserInfo) => {
+interface Props {
+  user: SessionUser | null;
+}
+
+const DesktopNav = ({ user }: Props) => {
   const [theme, setTheme] = useState({});
 
   const navigate = useNavigate();
@@ -65,11 +69,11 @@ const DesktopNav = ({ user, isAuthenticated }: SessionUserInfo) => {
 
           {/* Mobile + Tablet */}
           <div className="block max-[768px]:block min-[769px]:hidden">
-            <DropdownMenuMob user={user} isAuthenticated={isAuthenticated} />
+            <DropdownMenuMob user={user} />
           </div>
 
           {/* Desktop only */}
-          {isAuthenticated === true && user !== null ? (
+          {user !== null ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar

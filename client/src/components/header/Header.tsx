@@ -4,15 +4,14 @@ import MobileNav from "./MobileNav";
 import type { RootState } from "@/redux/store";
 
 const Header = () => {
-  const  {user, isAuthenticated}  = useAppSelector((state: RootState) => state.auth);
+  const user = useAppSelector((state: RootState) => state.auth.user);
 
-  console.log(user, isAuthenticated);
-  
-  
+  console.log(user);
+
   return (
     <div>
-      <MobileNav user={user!} isAuthenticated={isAuthenticated}/>
-      <DesktopNav user={user!} isAuthenticated={isAuthenticated}/>
+      <MobileNav user={user} />
+      <DesktopNav user={user} />
     </div>
   );
 };
