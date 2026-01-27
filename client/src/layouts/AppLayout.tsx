@@ -1,15 +1,34 @@
 // layouts/AppLayout.tsx
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
+import Footer from "@/components/navigation/Footer";
+import Header from "@/components/navigation/Header";
+import { Outlet } from "react-router-dom";
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+// layouts/AppLayout.tsx
+// Default app layout (includes Header and Footer)
+// Used by most authenticated & public pages
+
+// const AppLayout = ({ children }: { children: React.ReactNode }) => {
+//   return (
+//     <SidebarProvider>
+//       <AppSidebar />
+//       <main>
+//         <SidebarTrigger />
+//         {children}
+//       </main>
+//     </SidebarProvider>
+//   );
+// };
+
+const AppLayout = () => {
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <main>
-        <SidebarTrigger />
-        {children}
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <main className="flex-1">
+        <Outlet />
       </main>
-    </SidebarProvider>
-  )
-}
+      <Footer />
+    </div>
+  );
+};
+
+export default AppLayout;

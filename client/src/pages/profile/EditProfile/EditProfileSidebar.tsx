@@ -40,7 +40,7 @@ const items = [
   },
 ];
 
-export function EditProfileSidebar() {
+const EditProfileSidebar = () => {
   return (
     <Sidebar>
       <SidebarContent>
@@ -64,4 +64,6 @@ export function EditProfileSidebar() {
       </SidebarContent>
     </Sidebar>
   );
-}
+};
+
+export default EditProfileSidebar;

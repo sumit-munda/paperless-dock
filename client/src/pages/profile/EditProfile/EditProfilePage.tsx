@@ -2,7 +2,7 @@ import { useState } from "react";
 import EditProfileForm from "./EditProfileForm";
 import EditProfileLayout from "./EditProfileLayout";
 
-export default function EditProfilePage() {
+const EditProfilePage = () => {
   const [section, setSection] = useState("profile");
 
   return (
@@ -12,6 +12,6 @@ export default function EditProfilePage() {
       {section === "preferences" && <PreferencesForm />} */}
     </EditProfileLayout>
   );
-}
+};
 
-
+export default EditProfilePage;

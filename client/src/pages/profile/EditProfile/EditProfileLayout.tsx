@@ -1,4 +1,4 @@
-import MobileNav from "@/components/header/MobileNav";
+import MobileNav from "@/components/navigation/MobileNav";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { type ReactNode } from "react";
 import { EditProfileSidebar } from "./EditProfileSidebar";
