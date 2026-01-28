@@ -1,3 +1,4 @@
+import Logo from "@/components/common/Logo";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,11 +11,15 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/context/auth.context";
 import { useLoginGoogleMutation, useLoginMutation } from "@/redux/api/authApi";
+import { signinWithGoogle } from "@/services/auth.service";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+
+// pages/Login.tsx
+// Login page 
+// Handles email/password login and Google login
 
 const Login = () => {
   // Local state for controlled form inputs
@@ -25,20 +30,17 @@ const Login = () => {
 
   const navigate = useNavigate();
 
-  // Firebase auth helpers (Google sign-in)
-  const { signinWithGoogle, loading: firebaseLoading } = useAuth();
-
-  // Backend login mutations
-  const [login, { isLoading: apiLoading }] = useLoginMutation();
+  // RTK Query mutations
+  const [login, { isLoading }] = useLoginMutation();
   const [loginGoogle] = useLoginGoogleMutation();
 
   // Updates form fields on input change
-  const onChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   // Handles email/password login flow
-  const onSubmitHandler = async (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     try {
@@ -61,8 +63,8 @@ const Login = () => {
     }
   };
 
-  // Handles Google login using Firebase + backend sync
-  const signinWithGoogleHandler = async () => {
+  // Handles Google login flow using Firebase + backend sync
+  const handleGoogleLogin = async () => {
     try {
       // Authenticate user with Google via Firebase
       const firebaseRes = await signinWithGoogle();
@@ -92,20 +94,13 @@ const Login = () => {
     }
   };
 
-  // Combined loading state to prevent duplicate actions
-  const isLoading = apiLoading || firebaseLoading;
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6">
       <Card className="w-full max-w-sm">
+        {/* Card Header: Logo + description */}
         <CardHeader>
           <CardTitle>
-            <Button variant="unstyled" size="sm" onClick={() => navigate("/")}>
-              <img src="./src/assets/logo.png" alt="" className="w-7" />
-              <span className="text-start text-[.5rem]/2 ">
-                The <br /> Paperless <br /> Dock
-              </span>
-            </Button>
+           <Logo/>
           </CardTitle>
 
           <CardDescription>
@@ -114,14 +109,16 @@ const Login = () => {
 
           <CardAction>
             <Button variant="link" onClick={() => navigate("/register")}>
-              Create
+              Create Account
             </Button>
           </CardAction>
         </CardHeader>
 
+{/* Card content: Login form */}
         <CardContent>
-          <form id="login-form" onSubmit={onSubmitHandler}>
+          <form id="login-form" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-6">
+              {/* Email field */}
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -131,16 +128,17 @@ const Login = () => {
                   required
                   name="email"
                   value={form.email}
-                  onChange={onChangeHandler}
+                  onChange={handleChange}
                 />
               </div>
 
+{/* Password field */}
               <div className="grid gap-2">
                 <div className="flex items-center">
                   <Label htmlFor="password">Password</Label>
                   <a
-                    href="#"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                    href="/forgot-password"
+                    className="ml-auto text-sm underline-offset-4 hover:underline"
                   >
                     Forgot your password?
                   </a>
@@ -151,14 +149,15 @@ const Login = () => {
                   required
                   name="password"
                   value={form.password}
-                  onChange={onChangeHandler}
+                  onChange={handleChange}
                 />
               </div>
             </div>
           </form>
         </CardContent>
 
-        <CardFooter className="flex-col gap-2">
+{/* Card Footer: Login buttons */}
+        <CardFooter className="flex flex-col gap-2">
           <Button
             type="submit"
             className="w-full"
@@ -170,7 +169,7 @@ const Login = () => {
           <Button
             variant="outline"
             className="w-full"
-            onClick={signinWithGoogleHandler}
+            onClick={handleGoogleLogin}
             disabled={isLoading}
           >
             Login with Google

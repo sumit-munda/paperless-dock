@@ -1,6 +1,6 @@
 import type { DataResponse, MessageResponse } from "@/types/api";
 import { baseApi } from "./baseApi";
-import type { SessionUser } from "@/types/auth";
+import type { GoogleLoginPayload, SessionUser } from "@/types/auth";
 
 // redux/api/authApi.ts
 // RTK Query endpoints for authentication
@@ -21,7 +21,7 @@ export const authApi = baseApi.injectEndpoints({
     }),
 
     // Login with Google OAuth token
-    loginGoogle: builder.mutation<MessageResponse, { token: string }>({
+    loginGoogle: builder.mutation<MessageResponse, GoogleLoginPayload>({
       query: (data) => ({
         url: "/auth/google",
         method: "POST",

@@ -1,4 +1,4 @@
-import Footer from "@/components/navigation/Footer";
+import Footer from "@/components/layout/Footer";
 import Header from "@/components/navigation/Header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";

@@ -1,6 +1,6 @@
 // layouts/AppLayout.tsx
-import Footer from "@/components/navigation/Footer";
-import Header from "@/components/navigation/Header";
+import Footer from "@/components/layout/Footer";
+import Header from "@/components/layout/Header";
 import { Outlet } from "react-router-dom";
 
 // layouts/AppLayout.tsx

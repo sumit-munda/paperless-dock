@@ -1,6 +1,6 @@
 import { useAppSelector } from "@/redux/hooks";
-import DesktopNav from "./DesktopNav";
-import MobileNav from "./MobileNav";
+import DesktopNav from "../navigation/DesktopNav";
+import MobileNav from "../navigation/MobileNav";
 
 // navigation/Header.tsx
 // App Header

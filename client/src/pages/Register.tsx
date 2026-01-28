@@ -1,3 +1,4 @@
+import Logo from "@/components/common/Logo";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,11 +11,18 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/context/auth.context";
-import { useRegisterMutation } from "@/redux/api/authApi";
+import {
+  useLoginGoogleMutation,
+  useRegisterMutation,
+} from "@/redux/api/authApi";
+import { signinWithGoogle } from "@/services/auth.service";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+
+// pages/Register.tsx
+// Register page
+// Handles email/password registration and Google signup
 
 const Register = () => {
   // Local form state for controlled inputs
@@ -25,24 +33,22 @@ const Register = () => {
 
   const navigate = useNavigate();
 
-  // Firebase auth helpers (Google sign-in)
-  const { signinWithGoogle, loading: firebaseLoading } = useAuth();
-
-  // Backend registration mutation
-  const [register, { isLoading: apiLoading }] = useRegisterMutation();
+  // RTK Query mutation
+  const [register, { isLoading }] = useRegisterMutation();
+  const [loginGoogle] = useLoginGoogleMutation();
 
   // Handles input field updates
-  const onChangeHandler = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   // Handles email/password registration flow
-  const onSubmitHandler = async (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     try {
       // Send credentials to backend for registration
-     await register({
+      await register({
         email: form.email,
         password: form.password,
       }).unwrap();
@@ -62,7 +68,7 @@ const Register = () => {
   };
 
   // Handles Google sign-up using Firebase + backend sync
-  const signinWithGoogleHandler = async () => {
+  const handleGoogleSignup = async () => {
     try {
       // Authenticate user with Google via Firebase
       const firebaseRes = await signinWithGoogle();
@@ -72,8 +78,8 @@ const Register = () => {
       }
 
       // Register or sync Google user with backend
-       await register({
-        email: firebaseRes.user.email,
+      await loginGoogle({
+        email: firebaseRes.user.email!,
         googleId: firebaseRes.user.uid,
         name: firebaseRes.user.displayName || undefined,
         photo: firebaseRes.user.photoURL || undefined,
@@ -93,20 +99,13 @@ const Register = () => {
     }
   };
 
-  // Combined loading state to prevent double submits
-  const isLoading = apiLoading || firebaseLoading;
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6">
       <Card className="w-full max-w-sm">
+        {/* Card Header: Logo + description */}
         <CardHeader>
           <CardTitle>
-            <Button variant="unstyled" size="sm" onClick={() => navigate("/")}>
-              <img src="./src/assets/logo.png" alt="" className="w-7" />
-              <span className="text-start text-[.5rem]/2 ">
-                The <br /> Paperless <br /> Dock
-              </span>
-            </Button>
+            <Logo />
           </CardTitle>
 
           <CardDescription>
@@ -120,9 +119,11 @@ const Register = () => {
           </CardAction>
         </CardHeader>
 
+        {/* Card Content: Registration form */}
         <CardContent>
-          <form id="register-form" onSubmit={onSubmitHandler}>
+          <form id="register-form" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-6">
+              {/* Email field */}
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -132,40 +133,40 @@ const Register = () => {
                   required
                   name="email"
                   value={form.email}
-                  onChange={onChangeHandler}
+                  onChange={handleChange}
                 />
               </div>
 
+              {/* Password field */}
               <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                </div>
+                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
                   required
                   name="password"
                   value={form.password}
-                  onChange={onChangeHandler}
+                  onChange={handleChange}
                 />
               </div>
             </div>
           </form>
         </CardContent>
 
-        <CardFooter className="flex-col gap-2">
+{/* Card Footer: Submit buttons */}
+        <CardFooter className="flex flex-col gap-2">
           <Button
             type="submit"
-            disabled={isLoading}
             className="w-full"
-             form="register-form"
+            form="register-form"
+            disabled={isLoading}
           >
             {isLoading ? "Creating..." : "Create account"}
           </Button>
           <Button
             variant="outline"
             className="w-full"
-            onClick={signinWithGoogleHandler}
+            onClick={handleGoogleSignup}
             disabled={isLoading}
           >
             Continue with Google

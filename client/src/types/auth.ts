@@ -19,3 +19,11 @@ export interface UpdateProfilePayload {
     country?: string;
   };
 }
+
+// Payload sent to backend for Google login
+export interface GoogleLoginPayload {
+  email: string;
+  googleId: string;
+  name?: string;
+  photo?: string;
+}
