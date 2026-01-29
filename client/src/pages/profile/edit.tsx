@@ -1,5 +1,5 @@
 import { useState } from "react";
-import EditProfileForm from "./EditProfileForm";
+import EditProfileForm from "./forms/Profile";
 import EditProfileLayout from "./EditProfileLayout";
 
 const EditProfilePage = () => {
