@@ -20,10 +20,15 @@ import {
 } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import React from "react";
+import { useState } from "react";
 
-const EditPreferencesForm = () => {
-  const [position, setPosition] = React.useState("bottom");
+type Language = "en" | "hi" | "fr";
+
+// profile/forms/Preferences.tsx
+// Preferences details
+
+const PreferencesForm = () => {
+  const [language, setLanguage] = useState<Language>("en");
 
   return (
     <div className="w-full max-w-4xl p-8">
@@ -31,47 +36,56 @@ const EditPreferencesForm = () => {
         <FieldSet>
           <FieldLegend>Preferences</FieldLegend>
           <FieldDescription>Fill in your preferences.</FieldDescription>
+
           <FieldSeparator />
+
           <FieldGroup>
+            {/* Theme */}
             <Field orientation="responsive">
               <FieldContent>
-                <FieldLabel htmlFor="name">Theme</FieldLabel>
+                <FieldLabel>Theme</FieldLabel>
                 <FieldDescription>
-                  You can switch between dark and light themes.
+                  Toggle between light and dark mode.
                 </FieldDescription>
               </FieldContent>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center space-x-2">
-                  <Switch id="airplane-mode" />
-                  <Label htmlFor="airplane-mode">Airplane Mode</Label>
-                </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch id="theme-toggle" />
+                <Label htmlFor="airplane-mode">Dark Mode</Label>
               </div>
             </Field>
+
             <FieldSeparator />
+
+            {/* Language */}
             <Field orientation="responsive">
               <FieldContent>
-                <FieldLabel htmlFor="name">Language</FieldLabel>
-                <FieldDescription>Choose a language</FieldDescription>
+                <FieldLabel>Language</FieldLabel>
+                <FieldDescription>Select your language</FieldDescription>
               </FieldContent>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline">Open</Button>
+                  <Button variant="outline">{language.toUpperCase()}</Button>
                 </DropdownMenuTrigger>
+
                 <DropdownMenuContent className="w-56">
-                  <DropdownMenuLabel>Panel Position</DropdownMenuLabel>
+                  <DropdownMenuLabel>Language</DropdownMenuLabel>
+
                   <DropdownMenuSeparator />
+
                   <DropdownMenuRadioGroup
-                    value={position}
-                    onValueChange={setPosition}
+                    value={language}
+                    onValueChange={(value) => setLanguage(value as Language)}
                   >
-                    <DropdownMenuRadioItem value="top">
-                      Top
+                    <DropdownMenuRadioItem value="en">
+                      English
                     </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="bottom">
-                      Bottom
+                    <DropdownMenuRadioItem value="hi">
+                      Hindi
                     </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="right">
-                      Right
+                    <DropdownMenuRadioItem value="fr">
+                      French
                     </DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
                 </DropdownMenuContent>
@@ -84,4 +98,4 @@ const EditPreferencesForm = () => {
   );
 };
 
-export default EditPreferencesForm;
+export default PreferencesForm;

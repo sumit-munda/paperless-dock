@@ -100,7 +100,7 @@ const Login = () => {
         {/* Card Header: Logo + description */}
         <CardHeader>
           <CardTitle>
-           <Logo/>
+           <Logo className="p-0" onClick={() => navigate("/")}/>
           </CardTitle>
 
           <CardDescription>

@@ -1,17 +1,28 @@
 import { useState } from "react";
-import EditProfileForm from "./forms/Profile";
-import EditProfileLayout from "./EditProfileLayout";
+import ProfileLayout from "./components/ProfileLayout";
+import AccountForm from "./forms/Account";
+import PreferencesForm from "./forms/Preferences";
+import ProfileForm from "./forms/Profile";
+import SecurityForm from "./forms/Security";
+import SubscriptionForm from "./forms/Subscription";
+import type { ProfileSection } from "./types";
+import ProfileSettings from "./settings";
+import ProfileTabs from "./components/ProfileTabs";
 
-const EditProfilePage = () => {
-  const [section, setSection] = useState("profile");
+const ProfilePage = () => {
+  const [section, setSection] = useState<ProfileSection>("profile");
 
   return (
-    <EditProfileLayout>
-      {section === "profile" && <EditProfileForm />}
-      {/* {section === "security" && <SecurityForm />}
-      {section === "preferences" && <PreferencesForm />} */}
-    </EditProfileLayout>
+    <ProfileLayout onSelect={setSection} section={section}>
+      {section === "tabs" && <ProfileTabs />}
+      {section === "profile" && <ProfileForm />}
+      {section === "account" && <AccountForm />}
+      {section === "subscription" && <SubscriptionForm />}
+      {section === "security" && <SecurityForm />}
+      {section === "preferences" && <PreferencesForm />}
+      {section === "settings" && <ProfileSettings />}
+    </ProfileLayout>
   );
 };
 
-export default EditProfilePage;
+export default ProfilePage;

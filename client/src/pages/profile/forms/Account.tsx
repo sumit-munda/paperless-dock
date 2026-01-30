@@ -7,10 +7,15 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-const EditAccountForm = () => {
-  const { emailVerified, provider, role, createdAt } = {
+// profile/forms/Profile.tsx
+// Account-level information (mostly read-only)
+
+const AccountForm = () => {
+  // Temporarily static data
+  const { email, emailVerified, provider, role, createdAt } = {
+    email: "you@example.com",
     emailVerified: true,
-    provider: "credentials",
+    provider: "credentials" as "credentials" | "google",
     role: "user",
     createdAt: 12342342422342,
   };
@@ -22,13 +27,13 @@ const EditAccountForm = () => {
           {/* Email (editable) */}
           <Field>
             <FieldLabel htmlFor="email">Email address</FieldLabel>
-            <Input id="email" type="email" placeholder="you@example.com" />
+            <Input id="email" type="email" placeholder="you@example.com" defaultValue={email}/>
             <FieldDescription>
               Changing your email requires verification.
             </FieldDescription>
           </Field>
 
-          {/* Email verified (display only) */}
+          {/* Email verified status (display only) */}
           <Field>
             <FieldLabel>Email verified</FieldLabel>
             <Input
@@ -43,7 +48,7 @@ const EditAccountForm = () => {
             )}
           </Field>
 
-          {/* Provider (read-only) */}
+          {/* Auth Provider (read-only) */}
           <Field>
             <FieldLabel>Sign-in provider</FieldLabel>
             <Input
@@ -79,4 +84,4 @@ const EditAccountForm = () => {
   );
 };
 
-export default EditAccountForm;
+export default AccountForm;

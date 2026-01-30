@@ -2,7 +2,7 @@ import MobileNav from "@/components/navigation/MobileNav";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { type ReactNode } from "react";
 import { useAppSelector } from "@/redux/hooks";
-import EditProfileSheet from "./ProfileSheet";
+import ProfileSheet from "./ProfileSheet";
 import type { ProfileSection } from "../types";
 import ProfileSidebar from "./ProfileSidebar";
 
@@ -12,7 +12,7 @@ interface EditProfileLayoutProps {
   children: ReactNode;
 }
 
-const EditProfileLayout = ({ onSelect,section, children }: EditProfileLayoutProps) => {
+const ProfileLayout = ({ onSelect,section, children }: EditProfileLayoutProps) => {
   const user = useAppSelector((state) => state.auth.user);
 
   return (
@@ -21,7 +21,7 @@ const EditProfileLayout = ({ onSelect,section, children }: EditProfileLayoutProp
         {/* Mobile */}
         <header className="md:hidden mb-4">
           <MobileNav user={user} />
-          <EditProfileSheet onSelect={onSelect} />
+          <ProfileSheet onSelect={onSelect} />
         </header>
 
         {/* Desktop */}
@@ -44,4 +44,4 @@ const EditProfileLayout = ({ onSelect,section, children }: EditProfileLayoutProp
   );
 };
 
-export default EditProfileLayout;
+export default ProfileLayout;

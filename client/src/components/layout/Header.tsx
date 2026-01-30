@@ -7,10 +7,10 @@ import MobileNav from "../navigation/MobileNav";
 // Reads auth state from Redux
 
 const Header = () => {
-  const user = useAppSelector((state) => state.auth.user);
-
+  // const user = useAppSelector((state) => state.auth.user);
+const user = {}
   return (
-    <header className="w-full border-b bg-background">
+    <header className="w-full bg-background">
       <div className="mx-auto flex h-16 max-w-7xl items-center px-4">
         {/* Desktop navigation */}
         <div className="hidden md:flex w-full">

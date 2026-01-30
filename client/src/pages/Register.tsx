@@ -105,7 +105,7 @@ const Register = () => {
         {/* Card Header: Logo + description */}
         <CardHeader>
           <CardTitle>
-            <Logo />
+            <Logo className="p-0" onClick={() => navigate("/")} />
           </CardTitle>
 
           <CardDescription>
@@ -153,7 +153,7 @@ const Register = () => {
           </form>
         </CardContent>
 
-{/* Card Footer: Submit buttons */}
+        {/* Card Footer: Submit buttons */}
         <CardFooter className="flex flex-col gap-2">
           <Button
             type="submit"

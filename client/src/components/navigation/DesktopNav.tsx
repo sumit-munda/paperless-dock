@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { SessionUser } from "@/types/auth";
 import { useState } from "react";
 import UserMenu from "./UserMenu";
@@ -19,12 +19,14 @@ const DesktopNav = ({ user }: DesktopNavProps) => {
   // Local-only theme toggle placeholder
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
+  const navigate = useNavigate();
+
   return (
     <nav className="flex w-full items-center justify-between">
       {/* Left: logo + primary link */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-end gap-6">
         <Link to={"/"}>
-          <Logo />
+          <Logo onClick={() => navigate("/")}/>
         </Link>
 
         <Link
@@ -59,18 +61,25 @@ const DesktopNav = ({ user }: DesktopNavProps) => {
         >
           <GiLighthouse />
         </Button>
-      </div>
 
       {user ? (
         <UserMenu user={user} />
       ) : (
         <div className="hidden md:flex items-center gap-2">
-          <Button variant="ghost" size="sm">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/register")}
+          >
             Create Account
           </Button>
-          <Button size="sm">Login to Account</Button>
+          <Button size="sm" onClick={() => navigate("/login")}>
+            Login to Account
+          </Button>
         </div>
       )}
+      </div>
+
     </nav>
   );
 };

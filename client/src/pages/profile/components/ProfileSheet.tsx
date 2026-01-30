@@ -19,7 +19,7 @@ interface ProfileSheetProps {
 // ProfileSheet
 // Switches profile sections via parent state
 
-const EditProfileSheet = ({ onSelect }: ProfileSheetProps) => {
+const ProfileSheet = ({ onSelect }: ProfileSheetProps) => {
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -96,7 +96,7 @@ const EditProfileSheet = ({ onSelect }: ProfileSheetProps) => {
   );
 };
 
-export default EditProfileSheet;
+export default ProfileSheet;
 
 // Helper Component
 
