@@ -100,7 +100,7 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6">
       <Card className="w-full max-w-sm">
         {/* Card Header: Logo + description */}
         <CardHeader>
@@ -173,6 +173,11 @@ const Register = () => {
           </Button>
         </CardFooter>
       </Card>
+
+      {/* Helper text — just below card */}
+      <p className="mt-4 text-xs text-muted-foreground text-center">
+        By continuing, you agree to our Terms & Privacy Policy.
+      </p>
     </div>
   );
 };

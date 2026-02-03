@@ -17,6 +17,41 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 
+type SearchGroup = {
+  heading: string;
+  items: string[];
+};
+
+const SEARCH_GROUPS: SearchGroup[] = [
+  {
+    heading: "Genres",
+    items: ["Fiction", "Non-Fiction", "Fantasy", "Science Fiction", "Mystery"],
+  },
+  {
+    heading: "Categories",
+    items: ["Best Sellers", "New Releases", "Editor's Picks"],
+  },
+  {
+    heading: "Resources",
+    items: ["Reading Guides", "Author Interviews", "Community Reviews"],
+  },
+];
+
+// Helper component
+
+interface SearchGroupProps {
+  group: SearchGroup;
+}
+
+const SearchResultGroup = ({ group }: SearchGroupProps) => {
+  return (
+    <CommandGroup heading={group.heading}>
+      {group.items.map((item) => (
+        <CommandItem key={item}>{item}</CommandItem>
+      ))}
+    </CommandGroup>
+  );
+};
 
 export const GlobalSearch = () => {
   return (
@@ -24,7 +59,8 @@ export const GlobalSearch = () => {
       <DialogTrigger asChild>
         <Button variant="outstyled" className="flex items-center gap-2">
           <Search className="h-4 w-4" />
-          <span className="hidden min-[376px]:inline min-[769px]:hidden">
+
+          <span className="hidden min-[376px]:inline min-[768px]:hidden">
             Search…
           </span>
           <span className="hidden min-[769px]:inline">
@@ -49,32 +85,13 @@ export const GlobalSearch = () => {
             </div>
           </div>
 
-          {/* Content */}
+          {/* Results */}
           <CommandList className="h-[85vh] overflow-y-auto p-2 pt-0">
             <CommandEmpty>No results found.</CommandEmpty>
 
-            {/* GENRES */}
-            <CommandGroup heading="Genres">
-              <CommandItem>Fiction</CommandItem>
-              <CommandItem>Non-Fiction</CommandItem>
-              <CommandItem>Fantasy</CommandItem>
-              <CommandItem>Science Fiction</CommandItem>
-              <CommandItem>Mystery</CommandItem>
-            </CommandGroup>
-
-            {/* CATEGORIES */}
-            <CommandGroup heading="Categories">
-              <CommandItem>Best Sellers</CommandItem>
-              <CommandItem>New Releases</CommandItem>
-              <CommandItem>Editor&apos;s Picks</CommandItem>
-            </CommandGroup>
-
-            {/* RESOURCES */}
-            <CommandGroup heading="Resources">
-              <CommandItem>Reading Guides</CommandItem>
-              <CommandItem>Author Interviews</CommandItem>
-              <CommandItem>Community Reviews</CommandItem>
-            </CommandGroup>
+          {SEARCH_GROUPS.map((group) => (
+            <SearchResultGroup key={group.heading} group={group}/>
+          ))}
           </CommandList>
 
           {/* Footer */}

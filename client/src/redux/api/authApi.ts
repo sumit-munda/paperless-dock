@@ -23,7 +23,7 @@ export const authApi = baseApi.injectEndpoints({
     // Login with Google OAuth token
     loginGoogle: builder.mutation<MessageResponse, GoogleLoginPayload>({
       query: (data) => ({
-        url: "/auth/google",
+        url: "/auth/login/google",
         method: "POST",
         body: data,
       }),

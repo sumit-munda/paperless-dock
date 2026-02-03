@@ -1,17 +1,22 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import EditProfileSheet from "./ProfileSheet";
 import type { ProfileSection } from "../types";
+import type { UserProfile } from "@/types/user";
 
 interface ProfileHeaderProps {
+  data?: UserProfile;
   onEditSelect: (section: ProfileSection) => void;
 }
 
 // ProfileHeader
 // Displays user avatar + basic info
 
-const ProfileHeader = ({
-  onEditSelect
-}: ProfileHeaderProps) => {
+const ProfileHeader = ({ data, onEditSelect }: ProfileHeaderProps) => {
+  if (!data) return null;
+
+  console.log(data.username);
+  
+
   return (
     <div className="flex items-end justify-between gap-2 p-2">
       <div className="flex gap-3">
@@ -20,13 +25,13 @@ const ProfileHeader = ({
     ring-2 ring-background
     grayscale"
         >
-          <AvatarImage src="https://github.com/shadcn.png" alt="User avatar" />
-          <AvatarFallback>CN</AvatarFallback>
+          <AvatarImage src={data.photo} alt="User avatar" />
+          <AvatarFallback>{data.username}</AvatarFallback>
         </Avatar>
 
         <div className="flex flex-col justify-end">
-          <p className="font-semibold">Shad CN</p>
-          <p className="text-xs text-muted-foreground">@shadcn</p>
+          <p className="font-semibold">{data.name}</p>
+          <p className="text-xs text-muted-foreground">{data.username}</p>
         </div>
 
         {/* Opens sheet to select edit section */}

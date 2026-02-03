@@ -26,7 +26,7 @@ const DesktopNav = ({ user }: DesktopNavProps) => {
       {/* Left: logo + primary link */}
       <div className="flex items-end gap-6">
         <Link to={"/"}>
-          <Logo onClick={() => navigate("/")}/>
+          <Logo onClick={() => navigate("/")} />
         </Link>
 
         <Link
@@ -62,24 +62,23 @@ const DesktopNav = ({ user }: DesktopNavProps) => {
           <GiLighthouse />
         </Button>
 
-      {user ? (
-        <UserMenu user={user} />
-      ) : (
-        <div className="hidden md:flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/register")}
-          >
-            Create Account
-          </Button>
-          <Button size="sm" onClick={() => navigate("/login")}>
-            Login to Account
-          </Button>
-        </div>
-      )}
+        {user ? (
+          <UserMenu user={user} />
+        ) : (
+          <div className="hidden md:flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/register")}
+            >
+              Create Account
+            </Button>
+            <Button size="sm" onClick={() => navigate("/login")}>
+              Login to Account
+            </Button>
+          </div>
+        )}
       </div>
-
     </nav>
   );
 };

@@ -12,12 +12,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { LuSettings } from "react-icons/lu";
 import { PiUserFocusBold } from "react-icons/pi";
 import { DoorClosedLocked } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface UserMenuProps {
   user: SessionUser | null;
 }
 
 const UserMenu = ({ user }: UserMenuProps) => {
+  const navigate = useNavigate();
+
   return (
     <div>
       <DropdownMenu>
@@ -52,11 +55,11 @@ const UserMenu = ({ user }: UserMenuProps) => {
           <DropdownMenuSeparator />
 
           <DropdownMenuGroup>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/profile")}>
               <PiUserFocusBold />
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/settings")}>
               <LuSettings />
               Settings
             </DropdownMenuItem>

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { GiLighthouse } from "react-icons/gi";
 import { HiOutlineHomeModern } from "react-icons/hi2";
 import { LuDoorOpen, LuSettings } from "react-icons/lu";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Logo from "../common/Logo";
 import GlobalSearch from "../search/GlobalSearch";
 import { Button } from "../ui/button";
@@ -28,10 +28,10 @@ const MobileNav = ({ user }: MobNavProps) => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   return (
-    <header className="flex items-end justify-between gap-10 md:hidden">
+    <header className="flex w-full items-end justify-between md:hidden">
       <SheetHamburger />
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 shrink-0">
         <GlobalSearch />
 
         {/* Theme Toggle (UI-only for now) */}
@@ -62,14 +62,23 @@ export const SheetHamburger = () => {
         <Logo />
       </SheetTrigger>
 
-      <SheetContent side="left" className="w-full p-8 flex-col justify-between">
+      <SheetContent
+        side="left"
+        className="w-full p-8 flex flex-col justify-between shrink-0"
+      >
         <div>
           <h2 className="text-sm text-neutral-500 font-semibold mb-4">Menu</h2>
 
           <nav className="space-y-1 text-lg">
-            <button onClick={() => navigate("/")}>Home</button>
-            <button onClick={() => navigate("/profile")}>Profile</button>
-            <button onClick={() => navigate("/settings")}>Settings</button>
+            <Link to="/" className="nav-link">
+              Home
+            </Link>
+            <Link to="/profile" className="nav-link">
+              Profile
+            </Link>
+            <Link to="/settings" className="nav-link">
+              Settings
+            </Link>
           </nav>
         </div>
 

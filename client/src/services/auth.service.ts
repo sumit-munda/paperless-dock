@@ -30,7 +30,7 @@ export const logout = async () => {
    }
 
     // 3. Backend logout (clears HTTP-only cookies/credentials auth)
-    await fetch(`${import.meta.env.VITE_SERVER_URL}/auth/logout"`, {
+    await fetch(`${import.meta.env.VITE_SERVER_URL}/auth/logout`, {
       method: "POST",
       credentials: "include",
     });

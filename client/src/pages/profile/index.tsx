@@ -32,14 +32,14 @@ const ProfilePage = () => {
   const [section, setSection] = useState<ProfileSection>("tabs");
 
   // Profile data (currently logged for dev; UI integration later)
-  const { data: profile, isLoading, error } = useGetProfileQuery();
-  console.log(profile);
+  const { data, isLoading, error } = useGetProfileQuery();
+  console.log(data);
 
   return (
     <div>
       <div className="min-h-screen px-6 py-4">
         {/* Profile header */}
-        <ProfileHeader onEditSelect={setSection}/>
+        <ProfileHeader data={data} onEditSelect={setSection}/>
 
         {/* Content area */}
         <div className="flex justify-center p-2">

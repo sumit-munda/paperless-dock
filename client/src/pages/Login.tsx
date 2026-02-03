@@ -18,7 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 // pages/Login.tsx
-// Login page 
+// Login page
 // Handles email/password login and Google login
 
 const Login = () => {
@@ -95,12 +95,12 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6">
       <Card className="w-full max-w-sm">
         {/* Card Header: Logo + description */}
         <CardHeader>
           <CardTitle>
-           <Logo className="p-0" onClick={() => navigate("/")}/>
+            <Logo className="p-0" onClick={() => navigate("/")} />
           </CardTitle>
 
           <CardDescription>
@@ -114,7 +114,7 @@ const Login = () => {
           </CardAction>
         </CardHeader>
 
-{/* Card content: Login form */}
+        {/* Card content: Login form */}
         <CardContent>
           <form id="login-form" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-6">
@@ -132,7 +132,7 @@ const Login = () => {
                 />
               </div>
 
-{/* Password field */}
+              {/* Password field */}
               <div className="grid gap-2">
                 <div className="flex items-center">
                   <Label htmlFor="password">Password</Label>
@@ -156,7 +156,7 @@ const Login = () => {
           </form>
         </CardContent>
 
-{/* Card Footer: Login buttons */}
+        {/* Card Footer: Login buttons */}
         <CardFooter className="flex flex-col gap-2">
           <Button
             type="submit"
@@ -176,6 +176,11 @@ const Login = () => {
           </Button>
         </CardFooter>
       </Card>
+
+      {/* Helper text — just below card */}
+      <p className="mt-4 text-xs text-muted-foreground text-center">
+        By continuing, you agree to our Terms & Privacy Policy.
+      </p>
     </div>
   );
 };
