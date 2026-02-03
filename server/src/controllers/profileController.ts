@@ -33,7 +33,7 @@ export const updateMyProfile = TryCatch(async (req: AuthRequest, res, next) => {
     if (key.includes(".")) {
       const [parent, child] = key.split(".");
       if (req.body[parent]?.[child] !== undefined) {
-        updates[`{parent}.${child}`] = req.body[parent][child];
+        updates[`${parent}.${child}`] = req.body[parent][child];
       }
     } else if (req.body[key] !== undefined) {
       updates[key] = req.body[key];

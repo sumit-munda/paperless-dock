@@ -20,7 +20,8 @@ const userSchema = new mongoose.Schema<IUser>(
     },
     username: {
       type: String,
-      default: function (this: { email: string }) {
+      unique: true,
+      default: function (this: IUser) {
         return generateUsernameFromEmail(this.email);
       },
     },
@@ -33,11 +34,11 @@ const userSchema = new mongoose.Schema<IUser>(
       required: [true, "Please enter email"],
       unique: true,
       lowercase: true,
-      validate: [validator.isEmail],
+      validate: [validator.isEmail, "Invalid email address"],
     },
     password: {
       type: String,
-      required: function (this: any) {
+      required: function (this: IUser) {
         return this.provider === "credentials";
       },
       select: false,
@@ -58,11 +59,12 @@ const userSchema = new mongoose.Schema<IUser>(
     googleId: {
       type: String,
       sparse: true,
+      index: true,
     },
     photo: {
       type: String,
-      default: function (this: { username?: string }) {
-        return generatePhotoFromInitials(this.username);
+      default: function (this: IUser) {
+        return generatePhotoFromInitials(this.name);
       },
     },
     role: {
@@ -85,7 +87,7 @@ const userSchema = new mongoose.Schema<IUser>(
       city: { type: String, default: "" },
       country: { type: String, default: "" },
     },
-    isActive: { type: Boolean, default: true },
+    isActive: { type: Boolean, default: true, index: true },
     lastLoginAt: { type: Date },
     emailVerified: { type: Boolean, default: false },
     settings: {
@@ -99,7 +101,7 @@ const userSchema = new mongoose.Schema<IUser>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export const User = mongoose.model<IUser>("user", userSchema);
