@@ -7,25 +7,31 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import type { UserProfile } from "@/types/user";
 
-type SubscriptionStatus = "active" | "canceled" | "trialing" | "inactive";
+type SubscriptionStatus = "active" | "cancelled" | "inactive";
+
+interface SubscriptionFormProps {
+  data?: UserProfile;
+}
 
 // profile/form/Subscription.tsx
 // Subscription details
 
-const SubscriptionForm = () => {
-  const subscription: {
-    status: SubscriptionStatus;
-    stripeCustomerId?: string;
-  } = {
-    status: "active",
-    stripeCustomerId: "12324345325",
-  };
+const SubscriptionForm = ({ data }: SubscriptionFormProps) => {
+  const { subscription } = data!;
+  
+  // const subscription: {
+  //   status: SubscriptionStatus;
+  //   stripeCustomerId?: string;
+  // } = {
+  //   status: "active",
+  //   stripeCustomerId: "12324345325",
+  // };
 
   const statusLabel: Record<SubscriptionStatus, string> = {
     active: "Active",
-    canceled: "Canceled",
-    trialing: "Trial",
+    cancelled: "Cancelled",
     inactive: "Inactive",
   };
 

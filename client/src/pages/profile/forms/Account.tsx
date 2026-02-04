@@ -1,25 +1,36 @@
 import {
-    Field,
-    FieldDescription,
-    FieldGroup,
-    FieldLabel,
-    FieldSet,
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import type { UserProfile } from "@/types/user";
+
+interface AccountFormProps {
+  data?: UserProfile;
+}
 
 // profile/forms/Profile.tsx
 // Account-level information (mostly read-only)
 
-const AccountForm = () => {
+const AccountForm = ({ data }: AccountFormProps) => {
   // Temporarily static data
-  const { email, emailVerified, provider, role, createdAt } = {
-    email: "you@example.com",
-    emailVerified: true,
-    provider: "credentials" as "credentials" | "google",
-    role: "user",
-    createdAt: 12342342422342,
+  // const { email, emailVerified, provider, role, createdAt } = {
+  //   email: "you@example.com",
+  //   emailVerified: true,
+  //   provider: "credentials" as "credentials" | "google",
+  //   role: "user",
+  //   createdAt: 12342342422342,
+  // };
+
+  const { email, emailVerified, provider, role, createdAt } = data!;
+
+  const capitalize = (value: string) => {
+    return value ? value[0].toUpperCase() + value.slice(1) : "";
   };
-  
+
   return (
     <div className="w-full max-w-md">
       <FieldSet>
@@ -27,7 +38,12 @@ const AccountForm = () => {
           {/* Email (editable) */}
           <Field>
             <FieldLabel htmlFor="email">Email address</FieldLabel>
-            <Input id="email" type="email" placeholder="you@example.com" defaultValue={email}/>
+            <Input
+              id="email"
+              type="email"
+              placeholder={email}
+              defaultValue={email}
+            />
             <FieldDescription>
               Changing your email requires verification.
             </FieldDescription>
@@ -62,7 +78,7 @@ const AccountForm = () => {
           {/* Role (read-only) */}
           <Field>
             <FieldLabel>Account role</FieldLabel>
-            <Input value={role} readOnly disabled />
+            <Input value={capitalize(role)} readOnly disabled />
             <FieldDescription>Managed by the system.</FieldDescription>
           </Field>
 

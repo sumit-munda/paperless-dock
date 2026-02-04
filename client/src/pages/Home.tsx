@@ -5,19 +5,7 @@ import { LuTelescope } from "react-icons/lu";
 const Home = () => {
   return (
     <section className="w-full">
-      <div
-        className="
-      mx-auto
-      max-w-6xl
-      px-4 sm:px-6 lg:px-8
-      pt-16 sm:pt-20 lg:pt-28
-      pb-16
-      grid
-      gap-10
-      lg:grid-cols-2
-      items-center
-    "
-      >
+      <div className="pt-16 sm:pt-20 lg:pt-28 pb-16 grid gap-10 lg:grid-cols-2 items-center">
         {/* Text Content */}
         <div className="flex flex-col gap-4 text-center lg:text-left">
           <h1 className="scroll-m-20 text-4xl sm:text-5xl font-extrabold tracking-tight text-balance">

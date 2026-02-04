@@ -63,7 +63,7 @@ const DesktopNav = ({ user }: DesktopNavProps) => {
         </Button>
 
         {user ? (
-          <UserMenu user={user} />
+          <UserMenu />
         ) : (
           <div className="hidden md:flex items-center gap-2">
             <Button

@@ -1,5 +1,10 @@
-import type { SessionUser } from "@/types/auth";
+import { useGetProfileQuery } from "@/redux/api/profileApi";
 import { logout } from "@/services/auth.service";
+import { DoorClosedLocked } from "lucide-react";
+import { LuSettings } from "react-icons/lu";
+import { PiUserFocusBold } from "react-icons/pi";
+import { useNavigate } from "react-router-dom";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,18 +13,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { LuSettings } from "react-icons/lu";
-import { PiUserFocusBold } from "react-icons/pi";
-import { DoorClosedLocked } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
-interface UserMenuProps {
-  user: SessionUser | null;
-}
-
-const UserMenu = ({ user }: UserMenuProps) => {
+const UserMenu = () => {
   const navigate = useNavigate();
+
+  const { data, isLoading } = useGetProfileQuery();
+
+  if (isLoading || !data?.data) return null; // or skeleton / placeholder
+
+  const { photo, name, username } = data.data;
+
+  const avatarFallback = photo.split("=")[1];
 
   return (
     <div>
@@ -29,11 +33,8 @@ const UserMenu = ({ user }: UserMenuProps) => {
             className=" h-9 w-9
     ring-2 ring-background"
           >
-            <AvatarImage
-              src="https://github.com/shadcn.png"
-              alt="User avatar"
-            />
-            <AvatarFallback>U</AvatarFallback>
+            <AvatarImage src={photo} alt="User avatar" />
+            <AvatarFallback>{avatarFallback}</AvatarFallback>
           </Avatar>
         </DropdownMenuTrigger>
 
@@ -41,13 +42,13 @@ const UserMenu = ({ user }: UserMenuProps) => {
           <DropdownMenuGroup>
             <DropdownMenuItem className="gap-2">
               <Avatar className=" h-8 w-8">
-                <AvatarImage src="https://github.com/shadcn.png" />
-                <AvatarFallback>U</AvatarFallback>
+                <AvatarImage src={photo} />
+                <AvatarFallback>{avatarFallback}</AvatarFallback>
               </Avatar>
 
               <div className="text-xs">
-                <p className="font-medium">User</p>
-                <p>@user</p>
+                <p className="font-medium">{name}</p>
+                <p>{username}</p>
               </div>
             </DropdownMenuItem>
           </DropdownMenuGroup>

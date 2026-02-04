@@ -13,6 +13,7 @@ import Register from "./pages/Register";
 import { useGetSessionQuery } from "./redux/api/authApi";
 import { useAppDispatch, useAppSelector } from "./redux/hooks";
 import { clearUser, setUser } from "./redux/slices/authSlice";
+import { disableFetch } from "./redux/slices/sessionSlice";
 
 // src/App.tsx
 // Root application compnent: routing + session sync
@@ -21,19 +22,29 @@ const App = () => {
   // Controls whether session API should run
   const { shouldFetch } = useAppSelector((state) => state.session);
 
-  const { data } = useGetSessionQuery(undefined, { skip: !shouldFetch });
+  const { data, error, isLoading, isUninitialized } = useGetSessionQuery(
+    undefined,
+    { skip: !shouldFetch },
+  );
   const dispatch = useAppDispatch();
 
   // Sync session API response with Redux auth state
   useEffect(() => {
-    if (!data) return;
+    // Still loading or query not started -> do nothing
+    if (isLoading || isUninitialized) return;
 
-    if (data.data) {
+    // Successful session
+    if (data?.data) {
       dispatch(setUser(data.data));
-    } else {
-      dispatch(clearUser());
+      return;
     }
-  }, [data, dispatch]);
+
+    // Session explicitly failed (401)
+    if (error && "status" in error && error.status === 401) {
+      dispatch(clearUser());
+      dispatch(disableFetch()); // prevent retry loop
+    }
+  }, [data, error, isLoading, isUninitialized, dispatch]);
 
   const router = createBrowserRouter([
     // Public pages with header/footer

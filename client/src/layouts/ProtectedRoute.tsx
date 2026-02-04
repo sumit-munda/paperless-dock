@@ -5,9 +5,12 @@ import { Navigate, Outlet } from "react-router-dom";
 // Protects routes that require authentication
 
 const ProtectedRoute = () => {
-  const user = useAppSelector((state) => state.auth.user);
+  const { user, initialized } = useAppSelector((state) => state.auth);
 
-  // const user = {}
+  // ⏳ wait for session check
+  if (!initialized) {
+    return null; // or spinner
+  }
 
   if (!user) {
     return <Navigate to={"/login"} replace />;

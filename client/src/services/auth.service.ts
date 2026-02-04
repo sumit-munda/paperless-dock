@@ -17,17 +17,13 @@ export const signinWithGoogle = () => {
 // Logout flow (supports both Google + credentials users)
 export const logout = async () => {
   try {
-     // 1. Clear client-side auth/session state
-    store.dispatch(clearUser());
-    store.dispatch(disableFetch());
-    store.dispatch(baseApi.util.resetApiState());
+    // 1. Clear client-side auth/session state
+    store.dispatch(disableFetch()); // 1. Stop session fetching FIRST
+    store.dispatch(clearUser()); // 2. Clear redux auth
+    store.dispatch(baseApi.util.resetApiState()); // 3. Clear RTK Query cache
 
     // 2. Firebase logout (only Google-auth users)
-   try {
-     await signOut(firebaseAuth).catch(() => {});
-   } catch (error) {
-      // ignore firebase logout errors
-   }
+    await signOut(firebaseAuth).catch(() => {});
 
     // 3. Backend logout (clears HTTP-only cookies/credentials auth)
     await fetch(`${import.meta.env.VITE_SERVER_URL}/auth/logout`, {

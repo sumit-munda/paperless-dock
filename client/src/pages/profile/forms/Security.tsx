@@ -8,11 +8,18 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import type { UserProfile } from "@/types/user";
+
+interface SecurityFormProps {
+  data?: UserProfile;
+}
 
 // profile/forms/Security.tsx
 // Password & security management
 
-const SecurityForm = () => {
+const SecurityForm = ({ data }: SecurityFormProps) => {
+  // const {lastLoginAt} = data!;
+
   // todo
   const handleForgotPassword = () => {
     console.warn("Forgot password flow not implemented yet");

@@ -20,15 +20,26 @@ import {
 } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import type { UserProfile } from "@/types/user";
 import { useState } from "react";
 
-type Language = "en" | "hi" | "fr";
+type Language = "en" | "hi" ;
+
+interface PreferencesFormProps {
+  data?: UserProfile;
+}
 
 // profile/forms/Preferences.tsx
 // Preferences details
 
-const PreferencesForm = () => {
+const PreferencesForm = ({ data }: PreferencesFormProps) => {
   const [language, setLanguage] = useState<Language>("en");
+
+  const {theme} = data?.settings!;
+
+  const capitalize = (value: string) => {
+    return value ? value[0].toUpperCase() + value.slice(1) : "";
+  };
 
   return (
     <div className="w-full max-w-4xl p-8">
@@ -51,7 +62,7 @@ const PreferencesForm = () => {
 
               <div className="flex items-center space-x-2">
                 <Switch id="theme-toggle" />
-                <Label htmlFor="airplane-mode">Dark Mode</Label>
+                <Label htmlFor="airplane-mode">{`${capitalize(theme)} Mode`}</Label>
               </div>
             </Field>
 

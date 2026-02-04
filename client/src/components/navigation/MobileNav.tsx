@@ -132,7 +132,7 @@ export const DropdownMenuMob = ({ user }: MobNavProps) => {
 
   return (
     <div>
-      <UserMenu user={user} />
+      <UserMenu />
     </div>
   );
 };

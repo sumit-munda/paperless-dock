@@ -12,13 +12,21 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { UserProfile } from "@/types/user";
 import type { ChangeEvent } from "react";
 import { BsCameraFill } from "react-icons/bs";
+
+interface ProfileFormProps {
+  data?: UserProfile;
+}
 
 // profile/forms/Profile.tsx
 // Profile information (mostly edit-only)
 
-const ProfileForm = () => {
+const ProfileForm = ({ data }: ProfileFormProps) => {
+  const { photo, name, username, bio, location } = data!;
+  const avatarFallback = photo.split("=")[1];
+
   // WIP
   const handlePhotoUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -48,13 +56,10 @@ const ProfileForm = () => {
                 <Avatar
                   className=" h-14 w-14
     ring-2 ring-background
-    grayscale"
+    "
                 >
-                  <AvatarImage
-                    src="https://github.com/shadcn.png"
-                    alt="Profile avatar"
-                  />
-                  <AvatarFallback>CN</AvatarFallback>
+                  <AvatarImage src={photo} alt="Profile avatar" />
+                  <AvatarFallback>{avatarFallback}</AvatarFallback>
                 </Avatar>
 
                 <label>
@@ -86,7 +91,7 @@ const ProfileForm = () => {
 
               <Input
                 id="name"
-                placeholder="Evil Rabbit"
+                placeholder={name}
                 autoComplete="name"
                 required
               />
@@ -103,7 +108,7 @@ const ProfileForm = () => {
 
               <Input
                 id="username"
-                placeholder="Evil Rabbit"
+                placeholder={username}
                 autoComplete="username"
                 required
               />
@@ -122,7 +127,7 @@ const ProfileForm = () => {
 
               <Textarea
                 id="bio"
-                placeholder="Hello, world!"
+                placeholder={bio}
                 className="min-h-[100px] resize-none sm:min-w-[300px]"
               />
             </Field>
@@ -136,7 +141,7 @@ const ProfileForm = () => {
                 <FieldDescription>City or country (optional).</FieldDescription>
               </FieldContent>
 
-              <Input id="location" placeholder="Bangalore, India" />
+              <Input id="location" placeholder={`${location?.city}, ${location?.country}`} />
             </Field>
 
             {/* Actions */}

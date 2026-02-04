@@ -2,12 +2,12 @@ import { useGetProfileQuery } from "@/redux/api/profileApi";
 import { useState } from "react";
 import ProfileHeader from "./components/ProfileHeader";
 import ProfileTabs from "./components/ProfileTabs";
-import EditAccountForm from "./forms/Account";
-import EditPreferencesForm from "./forms/Preferences";
-import EditProfileForm from "./forms/Profile";
-import EditSecurityForm from "./forms/Security";
-import EditSubscriptionForm from "./forms/Subscription";
-import EditSettings from "./settings";
+import AccountForm from "./forms/Account";
+import PreferencesForm from "./forms/Preferences";
+import ProfileForm from "./forms/Profile";
+import SecurityForm from "./forms/Security";
+import SubscriptionForm from "./forms/Subscription";
+import ProfileSettings from "./settings";
 import type { ProfileSection } from "./types";
 
 export type Payment = {
@@ -33,29 +33,32 @@ const ProfilePage = () => {
 
   // Profile data (currently logged for dev; UI integration later)
   const { data, isLoading, error } = useGetProfileQuery();
-  console.log(data);
+
+  const userProfileInfo = data?.data;
 
   return (
-    <div>
-      <div className="min-h-screen px-6 py-4">
-        {/* Profile header */}
-        <ProfileHeader data={data} onEditSelect={setSection}/>
+    <section aria-labelledby="profile-page" className="px-6 py-4">
+      {/* Profile header */}
+      <ProfileHeader onEditSelect={setSection} data={userProfileInfo} />
 
-        {/* Content area */}
-        <div className="flex justify-center p-2">
-          {/* Default tabbed dashboard */}
-          {section === "tabs" && <ProfileTabs />}
+      {/* Content area */}
+      <div className="flex justify-center p-2">
+        {/* Default tabbed dashboard */}
+        {section === "tabs" && <ProfileTabs />}
 
-          {/* Edit sections */}
-          {section === "profile" && <EditProfileForm />}
-          {section === "account" && <EditAccountForm />}
-          {section === "security" && <EditSecurityForm />}
-          {section === "subscription" && <EditSubscriptionForm />}
-          {section === "preferences" && <EditPreferencesForm />}
-          {section === "settings" && <EditSettings />}
-        </div>
+        {/* Edit sections */}
+        {section === "profile" && <ProfileForm data={userProfileInfo} />}
+        {section === "account" && <AccountForm data={userProfileInfo} />}
+        {section === "security" && <SecurityForm data={userProfileInfo} />}
+        {section === "subscription" && (
+          <SubscriptionForm data={userProfileInfo} />
+        )}
+        {section === "preferences" && (
+          <PreferencesForm data={userProfileInfo} />
+        )}
+        {section === "settings" && <ProfileSettings />}
       </div>
-    </div>
+    </section>
   );
 };
 

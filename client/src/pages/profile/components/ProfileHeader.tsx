@@ -14,24 +14,23 @@ interface ProfileHeaderProps {
 const ProfileHeader = ({ data, onEditSelect }: ProfileHeaderProps) => {
   if (!data) return null;
 
-  console.log(data.username);
-  
+  const { photo, name, username } = data;
+  const avatarFallback = data.photo.split("=")[1];
 
   return (
     <div className="flex items-end justify-between gap-2 p-2">
       <div className="flex gap-3">
         <Avatar
           className=" h-14 w-14
-    ring-2 ring-background
-    grayscale"
+    ring-2 ring-background"
         >
-          <AvatarImage src={data.photo} alt="User avatar" />
-          <AvatarFallback>{data.username}</AvatarFallback>
+          <AvatarImage src={photo} alt="User avatar" />
+          <AvatarFallback>{avatarFallback}</AvatarFallback>
         </Avatar>
 
         <div className="flex flex-col justify-end">
-          <p className="font-semibold">{data.name}</p>
-          <p className="text-xs text-muted-foreground">{data.username}</p>
+          <p className="font-semibold">{name}</p>
+          <p className="text-xs text-muted-foreground">{username}</p>
         </div>
 
         {/* Opens sheet to select edit section */}

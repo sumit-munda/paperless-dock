@@ -1,7 +1,7 @@
 import type { DataResponse, MessageResponse } from "@/types/api";
 import { baseApi } from "./baseApi";
-import type { UserProfile } from "firebase/auth";
 import type { UpdateProfilePayload } from "@/types/auth";
+import type { UserProfile } from "@/types/user";
 
 // redux/api/profileApi.ts
 // Handles current user profile operations

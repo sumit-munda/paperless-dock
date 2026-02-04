@@ -59,14 +59,6 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["user"],
     }),
-
-    // Refresh session or token
-    refresh: builder.query<MessageResponse, void>({
-      query: () => ({
-        url: "/auth/refresh",
-      }),
-      providesTags: ["user"],
-    }),
   }),
 });
 
@@ -77,5 +69,4 @@ export const {
   useRegisterMutation,
   useGetSessionQuery,
   useLogoutMutation,
-  useRefreshQuery,
 } = authApi;
