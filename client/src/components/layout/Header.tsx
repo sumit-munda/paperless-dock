@@ -1,6 +1,7 @@
 import { useAppSelector } from "@/redux/hooks";
 import DesktopNav from "../navigation/DesktopNav";
 import MobileNav from "../navigation/MobileNav";
+import type { SessionUser } from "@/types/auth";
 
 // navigation/Header.tsx
 // App Header
@@ -8,7 +9,9 @@ import MobileNav from "../navigation/MobileNav";
 
 const Header = () => {
   const user = useAppSelector((state) => state.auth.user);
-// const user = {}
+  
+  // const user:SessionUser = {id: "1234", role: "admin"};
+
   return (
     <header className="w-full bg-background">
       <div className="mx-auto flex h-16 max-w-7xl items-center px-4">

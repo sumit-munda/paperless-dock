@@ -17,7 +17,7 @@ import {
 } from "@/redux/api/authApi";
 import { signinWithGoogle } from "@/services/auth.service";
 import { useState, type ChangeEvent, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 // pages/Register.tsx
@@ -109,12 +109,12 @@ const Register = () => {
           </CardTitle>
 
           <CardDescription>
-            Enter your email below to create your account
+            Enter your email below to create your account on The Paperless Dock .
           </CardDescription>
 
           <CardAction>
             <Button variant="link" onClick={() => navigate("/login")}>
-              Login
+              Sign in
             </Button>
           </CardAction>
         </CardHeader>
@@ -175,9 +175,16 @@ const Register = () => {
       </Card>
 
       {/* Helper text — just below card */}
-      <p className="mt-4 text-xs text-muted-foreground text-center">
-        By continuing, you agree to our Terms & Privacy Policy.
-      </p>
+      <div className="mt-4 text-xs text-muted-foreground text-center">
+        <p>
+          Already have an account?{" "}
+          <Link to={"/login"} className="font-normal">
+            Sign in
+          </Link>
+          .
+        </p>
+        {/* <p>By continuing, you agree to our Terms & Privacy Policy.</p> */}
+      </div>
     </div>
   );
 };

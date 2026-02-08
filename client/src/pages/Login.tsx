@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useLoginGoogleMutation, useLoginMutation } from "@/redux/api/authApi";
 import { signinWithGoogle } from "@/services/auth.service";
 import { useState, type ChangeEvent, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 // pages/Login.tsx
@@ -104,7 +104,7 @@ const Login = () => {
           </CardTitle>
 
           <CardDescription>
-            Enter your email below to login to your account
+            Enter your email below to sign in to your account .
           </CardDescription>
 
           <CardAction>
@@ -164,7 +164,7 @@ const Login = () => {
             form="login-form"
             disabled={isLoading}
           >
-            Login
+            Sign in
           </Button>
           <Button
             variant="outline"
@@ -172,15 +172,18 @@ const Login = () => {
             onClick={handleGoogleLogin}
             disabled={isLoading}
           >
-            Login with Google
+            Sign in with Google
           </Button>
         </CardFooter>
       </Card>
 
       {/* Helper text — just below card */}
-      <p className="mt-4 text-xs text-muted-foreground text-center">
-        By continuing, you agree to our Terms & Privacy Policy.
-      </p>
+      <div className="mt-4 text-xs text-muted-foreground text-center">
+        <p>
+          Don’t have an account? <Link to={"/register"} className="font-normal">Create an account</Link>.
+        </p>
+        {/* <p>By continuing, you agree to our Terms & Privacy Policy.</p> */}
+      </div>
     </div>
   );
 };

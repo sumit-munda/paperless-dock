@@ -17,8 +17,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetTrigger } from "../ui/sheet";
 import UserMenu from "./UserMenu";
+import { LiaShoppingBagSolid } from "react-icons/lia";
 
 interface MobNavProps {
   user: SessionUser | null;
@@ -27,23 +28,40 @@ interface MobNavProps {
 const MobileNav = ({ user }: MobNavProps) => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
+  const navigate = useNavigate();
+
   return (
     <header className="flex w-full items-end justify-between md:hidden">
       <SheetHamburger />
 
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         <GlobalSearch />
 
         {/* Theme Toggle (UI-only for now) */}
         <Button
           variant="unstyled"
-          size={"icon-lg"}
+          size={"icon"}
           onClick={() => setTheme(theme === "light" ? "dark" : "light")}
         >
           <GiLighthouse />
         </Button>
 
-        <DropdownMenuMob user={user} />
+        {/* Cart Button */}
+        {user && (
+          <Button
+            variant="ghost"
+            size={"icon"}
+            onClick={() => navigate("/cart")}
+          >
+            <LiaShoppingBagSolid />
+          </Button>
+        )}
+
+        {user ? (
+          <UserMenu />
+        ) : (
+          <Button onClick={() => navigate("/login")}>@ Sign in</Button>
+        )}
       </div>
     </header>
   );
@@ -70,22 +88,30 @@ export const SheetHamburger = () => {
           <h2 className="text-sm text-neutral-500 font-semibold mb-4">Menu</h2>
 
           <nav className="space-y-1 text-lg">
-            <Link to="/" className="nav-link">
-              Home
-            </Link>
-            <Link to="/profile" className="nav-link">
-              Profile
-            </Link>
-            <Link to="/settings" className="nav-link">
-              Settings
-            </Link>
+            {[
+              ["/", "Home"],
+              ["/books", "Books"],
+              ["/read", "Read"],
+              ["/about", "About"],
+              ["/help", "Help"],
+              ["/contact", "Contact"],
+              ["/settings", "Settings"],
+            ].map(([to, label]) => (
+              <SheetClose asChild key={to}>
+                <Link to={to} className="nav-link">
+                  {label}
+                </Link>
+              </SheetClose>
+            ))}
           </nav>
         </div>
 
-        <Button size={"lg"} onClick={logout}>
-          <DoorClosedLocked />
-          Logout
-        </Button>
+        <SheetClose asChild>
+          <Button size={"lg"} onClick={logout}>
+            <DoorClosedLocked />
+            Logout
+          </Button>
+        </SheetClose>
       </SheetContent>
     </Sheet>
   );

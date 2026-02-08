@@ -1,3 +1,4 @@
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { Search } from "lucide-react";
 import { Button } from "../ui/button";
 import {
@@ -80,8 +81,11 @@ export const GlobalSearch = () => {
         <Command className="flex h-full flex-col">
           {/* Search Input */}
           <div className="p-3">
-            <div className="flex items-center gap-2 rounded-md border bg-muted px-3">
-              <CommandInput placeholder="Search..." className="h-9 text-sm" />
+            <div className="rounded-md border bg-muted">
+              <CommandInput
+                placeholder="Search books by genre or category…"
+                className="h-9 w-full  text-sm placeholder:text-muted-foreground"
+              />
             </div>
           </div>
 
@@ -89,9 +93,9 @@ export const GlobalSearch = () => {
           <CommandList className="h-[85vh] overflow-y-auto p-2 pt-0">
             <CommandEmpty>No results found.</CommandEmpty>
 
-          {SEARCH_GROUPS.map((group) => (
-            <SearchResultGroup key={group.heading} group={group}/>
-          ))}
+            {SEARCH_GROUPS.map((group) => (
+              <SearchResultGroup key={group.heading} group={group} />
+            ))}
           </CommandList>
 
           {/* Footer */}

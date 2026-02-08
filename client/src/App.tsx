@@ -14,6 +14,12 @@ import { useGetSessionQuery } from "./redux/api/authApi";
 import { useAppDispatch, useAppSelector } from "./redux/hooks";
 import { clearUser, setUser } from "./redux/slices/authSlice";
 import { disableFetch } from "./redux/slices/sessionSlice";
+import Books from "./pages/books/index";
+import Read from "./pages/Read";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import Cart from "./pages/Cart";
+import Help from "./pages/Help";
 
 // src/App.tsx
 // Root application compnent: routing + session sync
@@ -55,6 +61,26 @@ const App = () => {
           path: "/",
           element: <Home />,
         },
+        {
+          path: "/books",
+          element: <Books />,
+        },
+        {
+          path: "/read",
+          element: <Read />,
+        },
+        {
+          path: "/about",
+          element: <About />,
+        },
+        {
+          path: "/help",
+          element: <Help />,
+        },
+        {
+          path: "/contact",
+          element: <Contact />,
+        },
       ],
     },
 
@@ -87,6 +113,10 @@ const App = () => {
             {
               path: "/profile/edit",
               element: <EditProfilePage />,
+            },
+            {
+              path: "/cart",
+              element: <Cart />,
             },
           ],
         },

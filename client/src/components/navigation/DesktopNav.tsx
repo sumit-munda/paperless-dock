@@ -6,6 +6,7 @@ import Logo from "../common/Logo";
 import { Button } from "../ui/button";
 import { GiLighthouse } from "react-icons/gi";
 import GlobalSearch from "../search/GlobalSearch";
+import { LiaShoppingBagSolid } from "react-icons/lia";
 
 // navigation/DesktopNav.tsx
 // Desktop navigation
@@ -25,56 +26,88 @@ const DesktopNav = ({ user }: DesktopNavProps) => {
     <nav className="flex w-full items-center justify-between">
       {/* Left: logo + primary link */}
       <div className="flex items-end gap-6">
-        <Link to={"/"}>
-          <Logo onClick={() => navigate("/")} />
+        <Link to="/">
+          <Logo />
         </Link>
 
         <Link
-          to="/docs"
+          to="/"
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          Docs
+          Home
         </Link>
         <Link
-          to="/profile"
+          to="/books"
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          Features
+          Books
         </Link>
         <Link
-          to="/settings"
+          to="/read"
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          Pricing
+          Read
         </Link>
+        <Link
+          to="/about"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          About
+        </Link>
+        <Link
+          to="/help"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          Help
+        </Link>
+        {user && user.role === "admin" && (
+          <Link
+            to="/help"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Admin
+          </Link>
+        )}
+        {user && user.role === "seller" && (
+          <Link
+            to="/help"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            Seller
+          </Link>
+        )}
       </div>
 
       {/* Right: search, theme, auth */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <GlobalSearch />
 
         {/* Theme Toggle (UI only for now) */}
         <Button
-          variant="ghost"
+          variant="unstyled"
           size={"icon"}
           onClick={() => setTheme(theme === "light" ? "dark" : "light")}
         >
           <GiLighthouse />
         </Button>
 
+        {/* Cart Button */}
+        {user && (
+          <Button
+            variant="ghost"
+            size={"icon"}
+            onClick={() => navigate("/cart")}
+          >
+            <LiaShoppingBagSolid />
+          </Button>
+        )}
+
         {user ? (
           <UserMenu />
         ) : (
-          <div className="hidden md:flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/register")}
-            >
-              Create Account
-            </Button>
+          <div className="hidden md:flex">
             <Button size="sm" onClick={() => navigate("/login")}>
-              Login to Account
+              @ Sign in
             </Button>
           </div>
         )}
