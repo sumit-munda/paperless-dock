@@ -3,10 +3,10 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
   type CarouselApi,
 } from "@/components/ui/carousel";
+import { cn } from "@/lib/utils";
+import Autoplay from "embla-carousel-autoplay";
 import React from "react";
 
 const BannerCarousel = () => {
@@ -28,24 +28,46 @@ const BannerCarousel = () => {
   }, [api]);
 
   return (
-    <div className="mx-auto max-w-[10rem] sm:max-w-xs">
-      <Carousel setApi={setApi} className="w-full max-w-xs">
+    <div className="relative w-full">
+      <Carousel
+        setApi={setApi}
+        className="w-full"
+        plugins={[Autoplay({ delay: 3000, stopOnInteraction: true })]}
+        opts={{
+          loop: true,
+          duration: 20, // default is ~300
+        }}
+      >
         <CarouselContent>
-          {Array.from({ length: 3 }).map((_, index) => (
+          {Array.from({ length: 10 }).map((_, index) => (
             <CarouselItem key={index}>
-              <Card className="m-px">
-                <CardContent className="flex aspect-square items-center justify-center p-6">
-                  <img src="src/assets/Screenshot 2026-02-08 234936.png" alt="" className="w-full"/>
+              <Card className="relative overflow-hidden rounded-xl p-0">
+                <CardContent className="aspect-5/3 w-full p-0">
+                  <img
+                    src={`src/assets/banner-carousel/${index + 1}.png`}
+                    alt="carousel-slide"
+                    className="h-full w-full object-cover"
+                  />
                 </CardContent>
               </Card>
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious />
-        <CarouselNext />
       </Carousel>
-      <div className="text-muted-foreground py-2 text-center text-sm">
-        Slide {current} of {count}
+
+      {/* Dots */}
+      <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2">
+        {Array.from({ length: count }).map((_, i) => (
+          <button
+            key={i}
+            onClick={() => api?.scrollTo(i)}
+            className={cn(
+              "h-2 w-2 p-0 focus:outline-none rounded-full transition",
+              current === i + 1 ? "bg-white" : "bg-white/40 hover:bg-white/70",
+            )}
+            aria-label={`Go to slide ${i + 1}`}
+          />
+        ))}
       </div>
     </div>
   );
