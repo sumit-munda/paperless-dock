@@ -37,6 +37,12 @@ const DesktopNav = ({ user }: DesktopNavProps) => {
           Home
         </Link>
         <Link
+          to="/explore"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          Explore
+        </Link>
+        <Link
           to="/books"
           className="text-sm text-muted-foreground hover:text-foreground"
         >

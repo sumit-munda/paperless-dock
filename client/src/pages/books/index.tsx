@@ -1,6 +1,4 @@
 import { BreadCrumb } from "@/components/common/BreadCrumb";
-import BannerCarousel from "./components/BannerCarousel";
-import BooksCarousel from "./components/BooksCarousel";
 
 const Books = () => {
   return (
@@ -11,8 +9,7 @@ const Books = () => {
         </h1>
         <BreadCrumb />
       </div>
-      <BannerCarousel />
-      <BooksCarousel />
+     
     </section>
   );
 };

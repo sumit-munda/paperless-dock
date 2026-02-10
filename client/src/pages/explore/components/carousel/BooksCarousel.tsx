@@ -1,4 +1,3 @@
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Carousel,
   CarouselContent,
@@ -28,25 +27,25 @@ const BooksCarousel = () => {
                   className="
           absolute
           bottom-0
-          h-24
+          h-30
           w-full
          rounded-tl-[60%]
          rounded-tr-[80%]
          rounded-bl-[50%]
          rounded-br-[60%]
-          bg-muted
+          bg-blue-50
         "
                 />
 
                 {/* Book image */}
                 <img
-                  src={`src/assets/banner-carousel/${index + 1}.png`}
+                  src={`src/assets/hero-poster.jpg`}
                   alt="book-cover"
                   className="
           relative
           z-10
-          h-[65%]
-          w-[80%]
+          h-full
+          w-[70%]
           object-contain
         "
                 />

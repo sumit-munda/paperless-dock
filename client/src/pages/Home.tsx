@@ -1,10 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { GiBookmark } from "react-icons/gi";
 import { LuTelescope } from "react-icons/lu";
+import { useNavigate } from "react-router-dom";
 
 const Home = () => {
+  const navigate = useNavigate();
+
   return (
-    <section className="w-full">
+    <section aria-labelledby="home-page">
       <div className="pt-16 sm:pt-20 lg:pt-28 pb-16 grid gap-10 lg:grid-cols-2 items-center">
         {/* Text Content */}
         <div className="flex flex-col gap-4 text-center lg:text-left">
@@ -20,7 +23,7 @@ const Home = () => {
           </p>
 
           <div className="flex justify-center lg:justify-start gap-3 pt-2">
-            <Button size="sm">
+            <Button size="sm" onClick={() => navigate("/explore")}>
               <LuTelescope />
               Explore Books
             </Button>

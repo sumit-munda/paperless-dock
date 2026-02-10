@@ -20,6 +20,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Cart from "./pages/Cart";
 import Help from "./pages/Help";
+import Explore from "./pages/explore";
 
 // src/App.tsx
 // Root application compnent: routing + session sync
@@ -60,6 +61,10 @@ const App = () => {
         {
           path: "/",
           element: <Home />,
+        },
+        {
+          path: "/explore",
+          element: <Explore />,
         },
         {
           path: "/books",
