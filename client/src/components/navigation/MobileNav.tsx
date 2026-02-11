@@ -90,6 +90,7 @@ export const SheetHamburger = () => {
           <nav className="space-y-1 text-lg">
             {[
               ["/", "Home"],
+              ["/explore", "Explore"],
               ["/books", "Books"],
               ["/read", "Read"],
               ["/about", "About"],
