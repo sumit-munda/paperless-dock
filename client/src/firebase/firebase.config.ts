@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 
+// Firebase configuration (values injected via vite env variables)
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_KEY,
   authDomain: import.meta.env.VITE_AUTH_DOMAIN,
@@ -10,5 +11,5 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_MEASUREMENT_ID,
 };
 
+// Initialize Firebase app (singleton)
 export const firebaseApp = initializeApp(firebaseConfig);
-
