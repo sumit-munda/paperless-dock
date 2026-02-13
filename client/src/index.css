@@ -77,6 +77,11 @@
   #root {
     @apply min-h-screen md:px-6 lg:px-8;
   }
+
+  .nav-link {
+    @apply block text-left rounded-md
+           text-foreground hover:text-primary transition-colors;
+  }
 }
 
 /* SMACSS MODULES */
