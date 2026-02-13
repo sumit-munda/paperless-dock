@@ -1,11 +1,10 @@
 export interface RegisterUserCredentialsDTO {
-  name: string;
   email: string;
   password: string;
 }
 
 export interface RegisterUserGoogleDTO {
-  name: string;
+  name?: string;
   email: string;
   googleId: string;
   photo?: string;

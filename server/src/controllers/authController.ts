@@ -1,5 +1,4 @@
 import { User } from "../models/userModel.js";
-import { AuthRequest } from "../types/types.js";
 import { TryCatch } from "../utils/asyncHandler.js";
 import { setAuthCookies } from "../utils/cookies.js";
 import { ErrorHandler } from "../utils/errorHandler.js";
@@ -9,9 +8,11 @@ import {
   verifyRefreshToken,
 } from "../utils/jwt.js";
 
+import crypto from "crypto";
 import { Request, Response } from "express";
-import { ForgotPasswordDTO, LoginUserDTO } from "../dtos/auth.dto.js";
 import {
+  ForgotPasswordDTO,
+  LoginUserDTO,
   RegisterUserCredentialsDTO,
   RegisterUserGoogleDTO,
 } from "../dtos/auth.dto.js";
@@ -19,14 +20,14 @@ import { getUserByEmail } from "../services/user.service.js";
 import { clearAuthCookies } from "../utils/cookies.js";
 import { hashPassword, verifyPassword } from "../utils/password.js";
 import { hashToken } from "../utils/utils.js";
-import crypto from "crypto";
+import { AuthRequest } from "../types/types.js";
 
 export const registerUserWithCredentials = TryCatch(
   async (req: Request<{}, {}, RegisterUserCredentialsDTO>, res, next) => {
-    const { name, email, password } = req.body;
+    const { email, password } = req.body;
 
     // Validate required fields
-    if (!name || !email || !password) {
+    if (!email || !password) {
       return next(new ErrorHandler("Please fill in all required fields", 400));
     }
 
@@ -37,7 +38,6 @@ export const registerUserWithCredentials = TryCatch(
 
     // Create user
     await User.create({
-      name: name.trim(),
       email: email.toLowerCase().trim(),
       password: await hashPassword(password),
       provider: "credentials",
@@ -47,7 +47,7 @@ export const registerUserWithCredentials = TryCatch(
       success: true,
       message: "Registration successful",
     });
-  }
+  },
 );
 
 export const registerUserWithGoogle = TryCatch(
@@ -61,7 +61,7 @@ export const registerUserWithGoogle = TryCatch(
 
     // Create user
     await User.create({
-      name: name.trim(),
+      name: name?.trim() || "",
       email: email.toLowerCase().trim(),
       googleId,
       provider: "google",
@@ -72,7 +72,7 @@ export const registerUserWithGoogle = TryCatch(
       success: true,
       message: "Google sign-up successful",
     });
-  }
+  },
 );
 
 export const loginUser = TryCatch(
@@ -85,11 +85,17 @@ export const loginUser = TryCatch(
     }
 
     // Find user
-    const user = await User.findOne({ email: email.trim().toLowerCase() }).select(
-      "+password"
-    );
-    if (!user || user.provider !== "credentials") {
+    const user = await User.findOne({
+      email: email.trim().toLowerCase().trim(),
+      provider: "credentials",
+    }).select("+password role isActive passwordNeedsReset");
+
+    if (!user) {
       return next(new ErrorHandler("Invalid credentials", 401));
+    }
+
+    if (!user.isActive) {
+      return next(new ErrorHandler("Account is deactivated", 403));
     }
 
     // Block login until reset
@@ -99,9 +105,12 @@ export const loginUser = TryCatch(
 
     // Compare password
     const isMatch = await verifyPassword(user.password!, password);
+
     if (!isMatch) {
       return next(new ErrorHandler("Invalid credentials", 401));
     }
+
+      console.log("success2");
 
     // Generate token
     const accessToken = generateAccessToken({
@@ -121,10 +130,53 @@ export const loginUser = TryCatch(
       success: true,
       message: "Login successful",
     });
-  }
+  },
 );
 
-export const logoutUser = (req: Request, res: Response) => {
+export const loginUserWithGoogle = TryCatch(async (req: Request, res, next) => {
+  const { email, googleId, name, photo } = req.body;
+
+  if (!email || !googleId) {
+    return next(new ErrorHandler("Invalid Google login data", 400));
+  }
+
+  let user = await User.findOne({ email: email.toLowerCase().trim() });
+
+  // If user doesn't exist → create
+  if (!user) {
+    user = await User.create({
+      email: email.toLowerCase().trim(),
+      googleId,
+      provider: "google",
+      name: name?.trim() || "",
+      photo,
+    });
+  }
+
+  // Block deactivated users
+  if (!user.isActive) {
+    return next(new ErrorHandler("Account is deactivated", 403));
+  }
+
+  // Generate tokens
+  const accessToken = generateAccessToken({
+    id: user.id,
+    role: user.role,
+  });
+
+  const refreshToken = generateRefreshToken({
+    id: user.id,
+  });
+
+  setAuthCookies(res, accessToken, refreshToken);
+
+  res.status(200).json({
+    success: true,
+    message: "Google login successful",
+  });
+});
+
+export const logoutUser = (_req: Request, res: Response) => {
   clearAuthCookies(res);
 
   res.status(200).json({
@@ -133,39 +185,56 @@ export const logoutUser = (req: Request, res: Response) => {
   });
 };
 
-export const refreshAccessToken = TryCatch(
-  async (req, res, next) => {
-    const token = req.cookies?.refresh_token;
-    if (!token) throw new ErrorHandler("Unauthorized", 401);
-
-    let payload: { id: string };
-    try {
-      payload = verifyRefreshToken(token) as { id: string };
-    } catch {
-      throw new ErrorHandler("Invalid or expired refresh token", 401);
-    }
-
-    const user = await User.findById(payload.id);
-    if (!user) throw new ErrorHandler("User not found", 401);
-
-    // Generate new tokens
-    const accessToken = generateAccessToken({
-      id: user.id,
-      role: user.role,
-    });
-
-    const refreshToken = generateRefreshToken({ id: user.id });
-
-    // Set cookies
-    setAuthCookies(res, accessToken, refreshToken);
-
-    res.status(200).json({
-      success: true,
-      message: "Access token refreshed",
-    });
+// Returns the currently authenticated user's session identity
+// using JWT extracted from httpOnly cookies.
+export const getSessionUser = TryCatch((req: AuthRequest, res, next) => {
+  if (!req.user) {
+    return next(new ErrorHandler("Not authenticated", 401));
   }
-);
 
+  res.status(200).json({
+    success: true,
+    data: req.user, // minimal safe user payload
+  });
+});
+
+// Refresh access token
+export const refreshAccessToken = TryCatch(async (req, res, next) => {
+  const refreshToken = req.cookies?.refresh_token;
+  if (!refreshToken) {
+    return next(new ErrorHandler("Unauthorized", 401));
+  }
+
+  let payload: { id: string };
+  try {
+    payload = verifyRefreshToken(refreshToken) as { id: string };
+  } catch {
+    throw new ErrorHandler("Invalid or expired refresh token", 401);
+  }
+
+  const user = await User.findById(payload.id).select("role isActive");
+  if (!user || !user.isActive) {
+    return next(new ErrorHandler("Unauthorized", 401));
+  }
+
+  // Generate new tokens
+  const newAccessToken = generateAccessToken({
+    id: user.id,
+    role: user.role,
+  });
+
+  const newRefreshToken = generateRefreshToken({ id: user.id });
+
+  // Set cookies
+  setAuthCookies(res, newAccessToken, newRefreshToken);
+
+  res.status(200).json({
+    success: true,
+    message: "Access token refreshed",
+  });
+});
+
+// Forgot password
 export const forgotPassword = TryCatch(
   async (req: Request<{}, {}, ForgotPasswordDTO>, res, next) => {
     const { email } = req.body;
@@ -173,7 +242,7 @@ export const forgotPassword = TryCatch(
       return next(new ErrorHandler("Email is required", 400));
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
       // Prevent email enumeration
       res.status(200).json({
@@ -196,9 +265,10 @@ export const forgotPassword = TryCatch(
       success: true,
       message: "Password reset link sent",
     });
-  }
+  },
 );
 
+// Reset password
 export const resetPassword = TryCatch(async (req, res, next) => {
   const { token } = req.params;
   const { password } = req.body;

@@ -6,7 +6,7 @@ import { Document } from "mongoose";
 export type ExpressHandler = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => void | Promise<void>;
 
 // Mongoose’s base Document interface expects _id to be ObjectId, but you changed _id to string.
@@ -57,10 +57,10 @@ export interface MulterFile {
 
 export interface AuthPayload {
   id: string;
-  role?: "admin" | "seller" | "user";
+  role: "admin" | "seller" | "user";
 }
 
 export interface AuthRequest extends Request {
   user?: AuthPayload;
-  file?: MulterFile
+  file?: MulterFile;
 }
