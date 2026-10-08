@@ -5,9 +5,10 @@
   "description": "A digital bookstore and personal reading platform.",
   "main": "index.js",
   "scripts": {
-    "dev": "npm run dev --workspace=app/web",
-    "build": "npm run build --workspace=apps/web",
-    "test": "npm run test --workspace=apps/web"
+    "dev:web": "npm run dev --workspace=@paperless-dock/web",
+    "dev:api": "npm run dev --workspace=@paperless-dock/api",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces"
   },
   "workspaces": [
     "apps/*",
