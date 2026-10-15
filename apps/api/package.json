@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^24.19.1",
     "tsx": "^4.23.15",
@@ -21,6 +22,7 @@
   "type": "module",
   "dependencies": {
     "@paperless-dock/shared": "^1.0.0",
+    "cors": "^2.8.6",
     "express": "^5.2.1"
   }
 }

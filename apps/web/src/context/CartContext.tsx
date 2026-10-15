@@ -5,7 +5,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { books } from "../data/books";
 
 export interface CartItem {
   bookId: string;
@@ -19,7 +18,6 @@ interface CartContextValue {
   decreaseQuantity: (bookId: string) => void;
   removeFromCart: (bookId: string) => void;
   itemCount: number;
-  subtotal: number;
 }
 
 const CART_STORAGE_KEY = "paperless-dock-cart";
@@ -48,8 +46,7 @@ function loadCartItems(): CartItem[] {
       (item): item is CartItem =>
         typeof item === "object" &&
         item !== null &&
-        typeof item.bookId === "string" &&
-        books.some((book) => book.id === item.bookId) &&
+        typeof item.bookId === "string" && item.bookId.trim().length > 0 &&
         Number.isSafeInteger(item.quantity) &&
         item.quantity > 0 &&
         item.quantity <= 99,
@@ -69,11 +66,13 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   useEffect(() => {
     try {
       window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-    } catch {}
+    } catch {
+      // Ignore storage errors so they do not crash the application.
+    }
   }, [items]);
 
   function addToCart(bookId: string) {
-    if (!books.some((book) => book.id === bookId)) {
+    if (typeof bookId !== "string" || bookId.trim().length === 0) {
       return;
     }
 
@@ -126,12 +125,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const itemCount = items.reduce((total, item) => total + item.quantity, 0);
 
-  const subtotal = items.reduce((total, item) => {
-    const book = books.find((candidate) => candidate.id === item.bookId);
-
-    return total + (book ? book.price * item.quantity : 0);
-  }, 0);
-
   return (
     <CartContext.Provider
       value={{
@@ -141,7 +134,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         decreaseQuantity,
         removeFromCart,
         itemCount,
-        subtotal,
       }}
     >
       {children}

@@ -1,16 +1,88 @@
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { books } from "../data/books";
+import { fetchBookById } from "../api/booksApi";
 import { useCart } from "../context/CartContext";
-import { useState } from "react";
+import type { Book } from "../data/books";
 
 const BookDetailsPage = () => {
   const { bookId } = useParams();
 
   const { addToCart } = useCart();
 
+  const [book, setBook] = useState<Book | null>(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [error, setError] = useState<string | null>(null);
+
   const [addedToCart, setAddedToCart] = useState(false);
 
-  const book = books.find((item) => item.id === bookId);
+  useEffect(() => {
+    let isActive = true;
+
+    setBook(null);
+    setError(null);
+    setIsLoading(true);
+    setAddedToCart(false);
+
+    async function loadBook() {
+      try {
+        if (!bookId) {
+          throw new Error("No book ID was provided in the URL.");
+        }
+
+        const fetchedBook = await fetchBookById(bookId);
+
+        if (isActive) {
+          setBook(fetchedBook);
+        }
+      } catch (error) {
+        if (!isActive) {
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load this book. Please try again.",
+          );
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadBook();
+
+    return () => {
+      isActive = false;
+    };
+  }, [bookId]);
+
+  if (isLoading) {
+    return (
+      <section className="book-details" aria-labelledby="book-details-title">
+        <h1 id="book-details-title">Loading Book...</h1>
+
+        <p role="status" aria-live="polite">
+          Please wait while we retrieve the book details.
+        </p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="book-details" aria-labelledby="book-details-title">
+        <h1 id="book-details-title">Unable to load Book</h1>
+
+        <p role="alert">We couldn't load this book. {error}</p>
+
+        <Link className="button" to="/books">
+          Back to Discover Books
+        </Link>
+      </section>
+    );
+  }
 
   if (!book) {
     return (

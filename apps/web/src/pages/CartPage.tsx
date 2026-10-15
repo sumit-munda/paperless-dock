@@ -1,15 +1,46 @@
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
-import { books } from "../data/books";
+import { useBooks } from "../hooks/useBooks";
 
 const CartPage = () => {
-  const {
-    items,
-    increaseQuantity,
-    decreaseQuantity,
-    removeFromCart,
-    subtotal,
-  } = useCart();
+  const { items, increaseQuantity, decreaseQuantity, removeFromCart } =
+    useCart();
+
+  const { books, isLoading, error } = useBooks();
+
+  const subtotal = items.reduce((total, item) => {
+    const book = books.find((candidate) => candidate.id === item.bookId);
+
+    return total + (book ? book.price * item.quantity : 0);
+  }, 0);
+
+  if (isLoading) {
+    return (
+      <section className="cart-page" aria-labelledby="cart-title">
+        <h1 id="cart-title">Your Shopping Cart</h1>
+
+        <p role="status" aria-live="polite">
+          Loadig your cart...
+        </p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="cart-page" aria-labelledby="cart-title">
+        <h1 id="cart-title">Your Shopping Cart</h1>
+
+        <p role="alert">
+          We couldn't load your cart's book information. {error}
+        </p>
+
+        <Link to="/books" className="button">
+          Discover Books
+        </Link>
+      </section>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -36,7 +67,23 @@ const CartPage = () => {
           const book = books.find((candidate) => candidate.id === item.bookId);
 
           if (!book) {
-            return null;
+            return (
+              <article className="cart-item" key={item.bookId}>
+                <div className="cart-item-details">
+                  <h2>Book unavailable</h2>
+
+                  <p>This book could not be found in the current catalog.</p>
+
+                  <button
+                    type="button"
+                    className="remove-item-button"
+                    onClick={() => removeFromCart(item.bookId)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </article>
+            );
           }
 
           const itemTotal = book.price * item.quantity;

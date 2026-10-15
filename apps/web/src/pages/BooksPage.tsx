@@ -1,14 +1,55 @@
 import { Link } from "react-router-dom";
-import { books } from "../data/books";
 import BookCard from "../components/BookCard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { fetchBooks } from "../api/booksApi";
+import type { Book } from "../data/books";
 
 type SortOption = "title" | "price-low" | "price-high" | "rating";
 
 const BooksPage = () => {
+  const [books, setBooks] = useState<Book[]>([]);
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [error, setError] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState("");
+
   const [selectedCategory, setSelectedCategory] = useState("All");
+
   const [sortOption, setSortOption] = useState<SortOption>("title");
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadBooks() {
+      try {
+        const fetchedBooks = await fetchBooks();
+
+        if (isActive) {
+          setBooks(fetchedBooks);
+        }
+      } catch (error) {
+        if (isActive) {
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load books. Please try again.",
+          );
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadBooks();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const categories = ["All", ...new Set(books.map((book) => book.category))];
 
@@ -40,6 +81,30 @@ const BooksPage = () => {
 
     return secondBook.rating - firstBook.rating;
   });
+
+  if (isLoading) {
+    return (
+      <section className="book-page" aria-labelledby="books-title">
+        <h1 id="books-title">Discover Books</h1>
+
+        <p role="status" aria-live="polite">
+          Loading books...
+        </p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="books-page" aria-labelledby="books-title">
+        <h1 id="books-title">Discover Books</h1>
+
+        <p role="alert">We couldn't load the books. {error}</p>
+
+        <Link to="/">Back to Home</Link>
+      </section>
+    );
+  }
 
   return (
     <section className="books-page" aria-labelledby="books-title">
@@ -124,7 +189,9 @@ const BooksPage = () => {
               setSelectedCategory("All");
               setSortOption("title");
             }}
-          >Clear search and filters</button>
+          >
+            Clear search and filters
+          </button>
         </div>
       )}
 
