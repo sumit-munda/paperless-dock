@@ -8,7 +8,7 @@
     "dev:web": "npm run dev --workspace=@paperless-dock/web",
     "dev:api": "npm run dev --workspace=@paperless-dock/api",
     "build": "npm run build --workspaces",
-    "test": "npm run test --workspaces"
+    "test": "npm run test --workspaces  --if present"
   },
   "workspaces": [
     "apps/*",

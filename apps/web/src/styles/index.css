@@ -39,7 +39,7 @@
   color: var(--color-primary);
 }
 
-.site-header nav a:focus:visible {
+.site-header nav a:focus-visible {
   outline: 3px solid var(--color-accent);
   outline-offset: 4px;
 }
