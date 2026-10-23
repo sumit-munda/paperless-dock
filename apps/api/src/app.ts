@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { PACKAGE_NAME } from "@paperless-dock/shared";
-import { books } from "./books.js";
+import prisma from "./prisma.js";
 
 const app = express();
 
@@ -11,7 +11,6 @@ app.use(
   }),
 );
 
-
 app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
@@ -19,26 +18,105 @@ app.get("/health", (_req, res) => {
   });
 });
 
-app.get("/api/books", (_req, res) => {
+app.get("/api/books", async (_req, res) => {
+  const databaseBooks = await prisma.book.findMany({
+    where: {
+      status: "PUBLISHED",
+    },
+
+    include: {
+      authors: {
+        include: {
+          author: true,
+        },
+      },
+      categories: {
+        include: {
+          category: true,
+        },
+      },
+    },
+
+    orderBy: {
+      title: "asc",
+    },
+  });
+
+  const books = databaseBooks.map((book) => ({
+    id: book.id,
+    title: book.title,
+    author: book.authors.map((item) => item.author.name).join(", "),
+    category: book.categories.map((item) => item.category.name).join(", "),
+    description: book.description,
+    price: Number(book.price),
+    coverImage: book.coverImage ?? "",
+    rating: book.rating,
+  }));
+
   res.json({
     books,
   });
 });
 
-app.get("/api/books/:bookId", (req, res) => {
+app.get("/api/books/:bookId", async (req, res) => {
   const { bookId } = req.params;
 
-  const book = books.find((item) => item.id === bookId);
+  const databaseBook = await prisma.book.findFirst({
+    where: {
+      id: bookId,
+      status: "PUBLISHED",
+    },
+    include: {
+      authors: {
+        include: {
+          author: true,
+        },
+      },
+      categories: {
+        include: {
+          category: true,
+        },
+      },
+    },
+  });
 
-  if (!book) {
+  if (!databaseBook) {
     return res.status(404).json({
       message: "Book not found",
     });
   }
 
-  res.json({
+  const book = {
+    id: databaseBook.id,
+    title: databaseBook.title,
+    author: databaseBook.authors.map((item) => item.author.name).join(", "),
+    category: databaseBook.categories
+      .map((item) => item.category.name)
+      .join(", "),
+    description: databaseBook.description,
+    price: Number(databaseBook.price),
+    coverImage: databaseBook.coverImage ?? "",
+    rating: databaseBook.rating,
+  };
+
+  return res.json({
     book,
   });
 });
+
+app.use(
+  (
+    error: unknown,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    console.error("API error:", error);
+
+    res.status(500).json({
+      message: "Internal server error",
+    });
+  },
+);
 
 export default app;

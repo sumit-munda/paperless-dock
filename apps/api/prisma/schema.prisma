@@ -1,0 +1,247 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//1.  Roles that a user can have.
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+//2. Possilbe publication states of a book.
+enum BookStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+//3. Possible states of an order.
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+//4. Possible payment states.
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+//5. Publication states of a review.
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+//6. Customer and administrator accounts.
+model User {
+  id              String            @id @default(uuid())
+  name            String
+  email           String            @unique
+  passwordHash    String
+  role            UserRole          @default(CUSTOMER)
+  avatar          String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  orders          Order[]
+  libraryItems    LibraryItem[]
+  readingProgress ReadingProgress[]
+  reviews         Review[]
+  wishlistItems   WishlistItem[]
+}
+
+//7. Main bibiographic information for a book.
+model Book {
+  id               String            @id
+  title            String
+  slug             String            @unique
+  description      String            @db.Text
+  coverImage       String?
+  price            Decimal           @db.Decimal(10, 2)
+  currency         String            @default("INR") @db.VarChar(3)
+  publicationDate  DateTime?
+  language         String            @default("en")
+  pageCount        Int?
+  isbn             String?           @unique
+  publisherId      String?
+  publisher        Publisher?        @relation(fields: [publisherId], references: [id], onDelete: SetNull)
+  contentReference String?
+  status           BookStatus        @default(DRAFT)
+  rating           Float             @default(0)
+  reviewCount      Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  authors          BookAuthor[]
+  categories       BookCategory[]
+  orderItems       OrderItem[]
+  libraryItems     LibraryItem[]
+  readingProgress  ReadingProgress[]
+  reviews          Review[]
+  wishlistItems    WishlistItem[]
+
+  @@index([status])
+  @@index([title])
+}
+
+//8. Author profiles.
+model Author {
+  id        String       @id @default(uuid())
+  name      String
+  slug      String       @unique
+  biogarphy String?      @db.Text
+  photo     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  books     BookAuthor[]
+
+  @@index([name])
+}
+
+//9. Connects books and authors in a many-to-many relationship.
+model BookAuthor {
+  bookId   String
+  authorId String
+  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, authorId])
+  @@index([authorId])
+}
+
+//10. Resuable book categories.
+model Category {
+  id          String         @id @default(uuid())
+  name        String         @unique
+  slug        String         @unique
+  description String?        @db.Text
+  books       BookCategory[]
+  createdAt   DateTime       @default(now())
+}
+
+//11. Connects books and categories in a many-to-many relationship.
+model BookCategory {
+  bookId     String
+  categoryId String
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, categoryId])
+  @@index([categoryId])
+}
+
+//12. Publisher information.
+model Publisher {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  books     Book[]
+}
+
+//13. Stores customer orders.
+model Order {
+  id               String        @id @default(uuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  subtotal         Decimal       @db.Decimal(10, 2)
+  currency         String        @default("INR") @db.VarChar(3)
+  status           OrderStatus   @default(PENDING)
+  paymentStatus    PaymentStatus @default(PENDING)
+  paymentReference String?       @unique
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  items            OrderItem[]
+  libraryItems     LibraryItem[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+//14. Individual books within an order.
+model OrderItem {
+  id            String   @id @default(uuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  bookId        String
+  book          Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  titleSnapshot String
+  priceSnapshot Decimal  @db.Decimal(10, 2)
+  quantity      Int      @default(1)
+  createdAt     DateTime @default(now())
+
+  @@unique([orderId, bookId])
+  @@index([bookId])
+}
+
+//15. Represents a book that a user can access in their library.
+model LibraryItem {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId      String
+  book        Book     @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  orderId     String?
+  order       Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  purchasedAt DateTime @default(now())
+
+  @@unique([userId, bookId])
+  @@index([userId])
+  @@index([orderId])
+}
+
+//16. Stores the latest saved reading location for each user and book.
+model ReadingProgress {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId     String
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  position   String   @default("start")
+  percentage Float    @default(0)
+  lastReadAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, bookId])
+  @@index([userId, lastReadAt])
+}
+
+//17. Stores customer reviews of books.
+model Review {
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId    String
+  book      Book         @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  rating    Int
+  title     String?
+  body      String?      @db.Text
+  status    ReviewStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updateAt  DateTime     @updatedAt
+
+  @@unique([userId, bookId])
+  @@index([bookId, status])
+}
+
+//18. Stores books that users have saved to their wishlists.
+model WishlistItem {
+  id       String   @id @default(uuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookId   String
+  book     Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  createAt DateTime @default(now())
+
+  @@unique([userId, bookId])
+  @@index([userId])
+}
