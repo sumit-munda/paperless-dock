@@ -1,55 +1,18 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import BookCard from "../components/BookCard";
-import { useEffect, useState } from "react";
-import { fetchBooks } from "../api/booksApi";
-import type { Book } from "../data/books";
+import { useBooks } from "../hooks/useBooks";
 
 type SortOption = "title" | "price-low" | "price-high" | "rating";
 
 const BooksPage = () => {
-  const [books, setBooks] = useState<Book[]>([]);
-
-  const [isLoading, setIsLoading] = useState(true);
-
-  const [error, setError] = useState<string | null>(null);
+  const { books, isLoading, error } = useBooks();
 
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   const [sortOption, setSortOption] = useState<SortOption>("title");
-
-  useEffect(() => {
-    let isActive = true;
-
-    async function loadBooks() {
-      try {
-        const fetchedBooks = await fetchBooks();
-
-        if (isActive) {
-          setBooks(fetchedBooks);
-        }
-      } catch (error) {
-        if (isActive) {
-          setError(
-            error instanceof Error
-              ? error.message
-              : "Unable to load books. Please try again.",
-          );
-        }
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadBooks();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
 
   const categories = ["All", ...new Set(books.map((book) => book.category))];
 

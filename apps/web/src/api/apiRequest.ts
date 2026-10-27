@@ -9,10 +9,13 @@ export async function apiRequest<T>(
       method: options.method ?? "GET",
       ...options,
     });
-  } catch {
-    throw new Error(
+  } catch (error) {
+    const connectionError = new Error(
       "Unable to connect to the server. Please check your connection and try again.",
+      { cause: error },
     );
+
+    throw connectionError;
   }
 
   if (!response.ok) {
@@ -27,7 +30,9 @@ export async function apiRequest<T>(
     return (await response.json()) as T;
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error("The server returned an invalid JSON response.");
+      throw new Error("The server returned an invalid JSON response.", {
+        cause: error,
+      });
     }
     throw error;
   }

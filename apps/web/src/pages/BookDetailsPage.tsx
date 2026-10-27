@@ -20,11 +20,6 @@ const BookDetailsPage = () => {
   useEffect(() => {
     let isActive = true;
 
-    setBook(null);
-    setError(null);
-    setIsLoading(true);
-    setAddedToCart(false);
-
     async function loadBook() {
       try {
         if (!bookId) {
@@ -37,7 +32,7 @@ const BookDetailsPage = () => {
           setBook(fetchedBook);
         }
       } catch (error) {
-        if (!isActive) {
+        if (isActive) {
           setError(
             error instanceof Error
               ? error.message

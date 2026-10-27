@@ -20,7 +20,7 @@ const CartPage = () => {
         <h1 id="cart-title">Your Shopping Cart</h1>
 
         <p role="status" aria-live="polite">
-          Loadig your cart...
+          Loading your cart...
         </p>
       </section>
     );
