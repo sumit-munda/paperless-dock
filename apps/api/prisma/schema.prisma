@@ -59,6 +59,8 @@ model User {
   readingProgress ReadingProgress[]
   reviews         Review[]
   wishlistItems   WishlistItem[]
+  cart            Cart?
+  cartMigrations  CartMigration[]
 }
 
 //7. Main bibiographic information for a book.
@@ -89,6 +91,7 @@ model Book {
   readingProgress  ReadingProgress[]
   reviews          Review[]
   wishlistItems    WishlistItem[]
+  cartItems        CartItem[]
 
   @@index([status])
   @@index([title])
@@ -243,5 +246,54 @@ model WishlistItem {
   createAt DateTime @default(now())
 
   @@unique([userId, bookId])
+  @@index([userId])
+}
+
+//19. Stores a user's shopping cart.
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+//20. Stores individual books in a shopping cart.
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  bookId    String
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, bookId])
+  @@index([bookId])
+}
+
+//21. Stores Express authentication sessions.
+model Session {
+  sid    String   @id(map: "session_pkey") @db.VarChar
+  sess   Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire], map: "IDX_session_expire")
+  @@map("session")
+}
+
+//22. Records completed guest-cart migrations for each user.
+model CartMigration {
+  id          String   @id @default(uuid())
+  userId      String
+  migrationId String
+  payloadHash String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, migrationId])
   @@index([userId])
 }

@@ -6,6 +6,7 @@ export async function apiRequest<T>(
 
   try {
     response = await fetch(url, {
+      credentials: "include",
       method: options.method ?? "GET",
       ...options,
     });

@@ -3,16 +3,43 @@ import { useCart } from "../context/CartContext";
 import { useBooks } from "../hooks/useBooks";
 
 const CartPage = () => {
-  const { items, increaseQuantity, decreaseQuantity, removeFromCart } =
-    useCart();
+  const {
+    items,
+    increaseQuantity,
+    decreaseQuantity,
+    removeFromCart,
+    isLoading,
+    error,
+    migrationPending,
+    retryMigration,
+  } = useCart();
 
-  const { books, isLoading, error } = useBooks();
+  const { books } = useBooks();
 
   const subtotal = items.reduce((total, item) => {
     const book = books.find((candidate) => candidate.id === item.bookId);
 
     return total + (book ? book.price * item.quantity : 0);
   }, 0);
+
+  const migrationNotice = migrationPending ? (
+    <div className="cart-migration-notice">
+      <p>
+        Some items from your guest cart haven't been added to your account yet.
+        Your account cart is still available.
+      </p>
+
+      {error && <p role="alert">{error}</p>}
+
+      <button
+        type="button"
+        className="button"
+        onClick={() => void retryMigration()}
+      >
+        Retry migration
+      </button>
+    </div>
+  ) : null;
 
   if (isLoading) {
     return (
@@ -26,10 +53,12 @@ const CartPage = () => {
     );
   }
 
-  if (error) {
+  if (error && !migrationPending) {
     return (
       <section className="cart-page" aria-labelledby="cart-title">
         <h1 id="cart-title">Your Shopping Cart</h1>
+
+        {migrationNotice}
 
         <p role="alert">
           We couldn't load your cart's book information. {error}
@@ -47,6 +76,8 @@ const CartPage = () => {
       <section className="cart-page">
         <h1>Your Shopping Cart</h1>
 
+        {migrationNotice}
+
         <p>Your cart is empty. Discover a book you'd love to read.</p>
 
         <Link to="/books" className="button">
@@ -59,6 +90,8 @@ const CartPage = () => {
   return (
     <section className="cart-page">
       <h1>Your Shopping Cart</h1>
+
+      {migrationNotice}
 
       <p>Review your books and adjust quantities before checkout.</p>
 

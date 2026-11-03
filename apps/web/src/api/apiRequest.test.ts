@@ -39,6 +39,7 @@ describe("apiRequest", () => {
     await apiRequest<{ books: unknown[] }>("/api/books");
 
     expect(fetchMock).toHaveBeenCalledWith("/api/books", {
+      credentials: "include",
       method: "GET",
     });
   });
@@ -52,6 +53,7 @@ describe("apiRequest", () => {
     );
 
     const options: RequestInit = {
+      credentials: "include",
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "Atomic Habits" }),

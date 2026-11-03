@@ -1,8 +1,21 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../context/useAuth";
 
 const MainLayout = () => {
   const { itemCount } = useCart();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    try {
+      await logout();
+
+      navigate("/login", { replace: true });
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -25,6 +38,27 @@ const MainLayout = () => {
               {itemCount}
             </span>
           </Link>
+
+          {user ? (
+            <>
+              <span className="user-greeting">Hi, {user.name}</span>
+
+              <Link to="/profile">Profile</Link>
+
+              <button
+                className="nav-button"
+                type="button"
+                onClick={handleLogout}
+              >
+                Log out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login">Log in</Link>
+              <Link to="/register">Register</Link>
+            </>
+          )}
         </nav>
       </header>
 
