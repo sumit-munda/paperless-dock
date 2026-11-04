@@ -10,10 +10,12 @@ const {
   mockCartItemUpdate,
   mockCartItemUpdateMany,
   mockCartItemDeleteMany,
+  mockCartItemUpsert,
   mockTransaction,
   mockBookFindMany,
   mockCartMigrationCreate,
   mockCartMigrationFindUnique,
+  mockQueryRaw,
 } = vi.hoisted(() => ({
   mockCartUpsert: vi.fn(),
   mockCartFindUnique: vi.fn(),
@@ -24,10 +26,12 @@ const {
   mockCartItemUpdate: vi.fn(),
   mockCartItemUpdateMany: vi.fn(),
   mockCartItemDeleteMany: vi.fn(),
+  mockCartItemUpsert: vi.fn(),
   mockTransaction: vi.fn(),
   mockBookFindMany: vi.fn(),
   mockCartMigrationCreate: vi.fn(),
   mockCartMigrationFindUnique: vi.fn(),
+  mockQueryRaw: vi.fn(),
 }));
 
 vi.mock("../prisma.js", () => ({
@@ -43,8 +47,10 @@ vi.mock("../prisma.js", () => ({
       update: mockCartItemUpdate,
       updateMany: mockCartItemUpdateMany,
       deleteMany: mockCartItemDeleteMany,
+      upsert: mockCartItemUpsert,
     },
     $transaction: mockTransaction,
+    $queryRaw: mockQueryRaw,
     book: {
       findMany: mockBookFindMany,
     },
@@ -67,7 +73,7 @@ import {
 
 import { Prisma } from "../generated/prisma/index.js";
 import { createHash } from "node:crypto";
-import { MigrateGuestCartInput } from "../validation/cart.schema.js";
+import type { MigrateGuestCartInput } from "../validation/cart.schema.js";
 
 const userId = "user-123";
 const cartId = "cart-123";
@@ -81,7 +87,7 @@ const sampleCart = {
     {
       id: "item-123",
       bookId,
-      quantity: 2,
+      quantity: 1,
       book: {
         id: bookId,
         title: "Atomic Habits",
@@ -108,18 +114,23 @@ const emptyCart = {
 
 function createTransactionMock() {
   return {
+    $queryRaw: mockQueryRaw,
     book: {
       findFirst: mockBookFindFirst,
       findMany: mockBookFindMany,
     },
     cart: {
       upsert: mockCartUpsert,
+      findUnique: mockCartFindUnique,
       findUniqueOrThrow: mockCartFindUniqueOrThrow,
     },
     cartItem: {
       findUnique: mockCartItemFindUnique,
       create: mockCartItemCreate,
       update: mockCartItemUpdate,
+      updateMany: mockCartItemUpdateMany,
+      deleteMany: mockCartItemDeleteMany,
+      upsert: mockCartItemUpsert,
     },
     cartMigration: {
       create: mockCartMigrationCreate,
@@ -136,6 +147,8 @@ describe("Cart Service", () => {
         callback: (tx: ReturnType<typeof createTransactionMock>) => unknown,
       ) => callback(createTransactionMock()),
     );
+
+    mockQueryRaw.mockResolvedValue([{ id: cartId }]);
   });
 
   describe("getCart", () => {
@@ -153,7 +166,8 @@ describe("Cart Service", () => {
       });
 
       expect(result.id).toBe(cartId);
-      expect(result.itemCount).toBe(2);
+      expect(result.itemCount).toBe(1);
+      expect(result.items[0].quantity).toBe(1);
       expect(result.items[0].book.author).toBe("James Clear");
       expect(result.items[0].book.price).toBe(499);
     });
@@ -173,12 +187,11 @@ describe("Cart Service", () => {
     beforeEach(() => {
       mockBookFindFirst.mockResolvedValue({ id: bookId });
       mockCartUpsert.mockResolvedValue({ id: cartId });
-      mockCartItemFindUnique.mockResolvedValue(null);
-      mockCartItemCreate.mockResolvedValue({});
+      mockCartItemUpsert.mockResolvedValue({});
       mockCartFindUniqueOrThrow.mockResolvedValue(sampleCart);
     });
 
-    it("adds a new book to the cart", async () => {
+    it("adds a new book to the cart with quantity 1", async () => {
       const result = await addItemToCart(userId, {
         bookId,
         quantity: 1,
@@ -192,100 +205,133 @@ describe("Cart Service", () => {
         select: { id: true },
       });
 
-      expect(mockCartItemCreate).toHaveBeenCalledWith({
-        data: {
+      expect(mockCartItemUpsert).toHaveBeenCalledWith({
+        where: {
+          cartId_bookId: {
+            cartId,
+            bookId,
+          },
+        },
+        update: {},
+        create: {
           cartId,
           bookId,
           quantity: 1,
         },
       });
 
-      expect(result.itemCount).toBe(2);
+      expect(result.itemCount).toBe(1);
+      expect(mockQueryRaw).toHaveBeenCalled();
       expect(mockTransaction).toHaveBeenCalled();
     });
 
-    it("increases the quantity when the book already exists", async () => {
-      mockCartItemFindUnique.mockResolvedValue({
-        id: "item-123",
-        quantity: 2,
-      });
-
+    it("does not increase quantity when the book already exists", async () => {
       await addItemToCart(userId, {
         bookId,
-        quantity: 3,
+        quantity: 1,
       });
 
-      expect(mockCartItemUpdate).toHaveBeenCalledWith({
-        where: { id: "item-123" },
-        data: { quantity: 5 },
+      expect(mockCartItemUpsert).toHaveBeenCalledWith({
+        where: {
+          cartId_bookId: {
+            cartId,
+            bookId,
+          },
+        },
+        update: {},
+        create: {
+          cartId,
+          bookId,
+          quantity: 1,
+        },
       });
 
-      expect(mockCartItemCreate).not.toHaveBeenCalled();
+      expect(mockCartItemUpdate).not.toHaveBeenCalled();
+    });
+
+    it("rejects quantities other than 1", async () => {
+      await expect(
+        addItemToCart(userId, {
+          bookId,
+          quantity: 2,
+        }),
+      ).rejects.toMatchObject({
+        message: "Digital books can only have a quantity of 1.",
+        statusCode: 400,
+      });
+
+      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(mockCartItemUpsert).not.toHaveBeenCalled();
     });
 
     it("rejects a book that is not published or does not exist", async () => {
       mockBookFindFirst.mockResolvedValue(null);
 
       await expect(
-        addItemToCart(userId, { bookId, quantity: 1 }),
+        addItemToCart(userId, {
+          bookId,
+          quantity: 1,
+        }),
       ).rejects.toMatchObject({
         message: "Book not found or unavailable.",
         statusCode: 404,
       });
 
-      expect(mockCartItemCreate).not.toHaveBeenCalled();
-    });
-
-    it("rejects quantities exceeding 99", async () => {
-      mockCartItemFindUnique.mockResolvedValue({
-        id: "item-123",
-        quantity: 95,
-      });
-
-      await expect(
-        addItemToCart(userId, {
-          bookId,
-          quantity: 5,
-        }),
-      ).rejects.toBeInstanceOf(CartServiceError);
-
-      expect(mockCartItemUpdate).not.toHaveBeenCalled();
+      expect(mockCartItemUpsert).not.toHaveBeenCalled();
     });
   });
 
   describe("updateCartItem", () => {
-    it("updates an existing cart item's quantity", async () => {
-      mockCartFindUnique.mockResolvedValue({
-        id: cartId,
-        items: sampleCart.items,
-      });
-
+    beforeEach(() => {
+      mockCartFindUnique.mockResolvedValue({ id: cartId });
       mockCartItemUpdateMany.mockResolvedValue({ count: 1 });
-      mockCartUpsert.mockResolvedValue({ id: cartId });
       mockCartFindUniqueOrThrow.mockResolvedValue(sampleCart);
+    });
 
+    it("keeps an existing cart item's quantity at 1", async () => {
       const result = await updateCartItem(userId, bookId, {
-        quantity: 4,
+        quantity: 1,
       });
 
       expect(mockCartItemUpdateMany).toHaveBeenCalledWith({
         where: { cartId, bookId },
-        data: { quantity: 4 },
+        data: { quantity: 1 },
       });
 
+      expect(mockQueryRaw).toHaveBeenCalled();
       expect(result.id).toBe(cartId);
     });
 
-    it("returns 404 when the cart item does not exist", async () => {
-      mockCartFindUnique.mockResolvedValue({
-        id: cartId,
-        items: [],
+    it("rejects quantities other than 1", async () => {
+      await expect(
+        updateCartItem(userId, bookId, {
+          quantity: 2,
+        }),
+      ).rejects.toMatchObject({
+        message: "Digital books can only have a quantity of 1.",
+        statusCode: 400,
       });
 
+      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(mockCartItemUpdateMany).not.toHaveBeenCalled();
+    });
+
+    it("returns 404 when the cart does not exist", async () => {
+      mockCartFindUnique.mockResolvedValue(null);
+
+      await expect(
+        updateCartItem(userId, bookId, { quantity: 1 }),
+      ).rejects.toMatchObject({
+        statusCode: 404,
+        message: "Cart not found.",
+      });
+    });
+
+    it("returns 404 when the cart item does not exist", async () => {
       mockCartItemUpdateMany.mockResolvedValue({ count: 0 });
 
       await expect(
-        updateCartItem(userId, bookId, { quantity: 4 }),
+        updateCartItem(userId, bookId, { quantity: 1 }),
       ).rejects.toMatchObject({
         statusCode: 404,
         message: "Cart item not found.",
@@ -294,14 +340,12 @@ describe("Cart Service", () => {
   });
 
   describe("removeCartItem", () => {
-    it("removes the requested book from the user's cart", async () => {
-      mockCartFindUnique.mockResolvedValue({
-        id: cartId,
-        items: sampleCart.items,
-      });
+    beforeEach(() => {
+      mockCartFindUnique.mockResolvedValue({ id: cartId });
+    });
 
+    it("removes the requested book from the user's cart", async () => {
       mockCartItemDeleteMany.mockResolvedValue({ count: 1 });
-      mockCartUpsert.mockResolvedValue({ id: cartId });
       mockCartFindUniqueOrThrow.mockResolvedValue(emptyCart);
 
       const result = await removeCartItem(userId, bookId);
@@ -310,15 +354,11 @@ describe("Cart Service", () => {
         where: { cartId, bookId },
       });
 
+      expect(mockQueryRaw).toHaveBeenCalled();
       expect(result.items).toEqual([]);
     });
 
     it("returns 404 when the requested item does not exist", async () => {
-      mockCartFindUnique.mockResolvedValue({
-        id: cartId,
-        items: [],
-      });
-
       mockCartItemDeleteMany.mockResolvedValue({ count: 0 });
 
       await expect(removeCartItem(userId, bookId)).rejects.toMatchObject({
@@ -331,7 +371,7 @@ describe("Cart Service", () => {
   describe("clearCart", () => {
     it("removes all items belonging to the user's cart", async () => {
       mockCartUpsert.mockResolvedValue({ id: cartId });
-      mockCartItemDeleteMany.mockResolvedValue({ count: 2 });
+      mockCartItemDeleteMany.mockResolvedValue({ count: 1 });
       mockCartFindUniqueOrThrow.mockResolvedValue(emptyCart);
 
       const result = await clearCart(userId);
@@ -340,6 +380,7 @@ describe("Cart Service", () => {
         where: { cartId },
       });
 
+      expect(mockQueryRaw).toHaveBeenCalled();
       expect(result.items).toEqual([]);
       expect(result.itemCount).toBe(0);
     });
@@ -348,11 +389,11 @@ describe("Cart Service", () => {
   describe("migrateGuestCart", () => {
     const migrationId = "550e8400-e29b-41d4-a716-446655440000";
 
-    const migrationInput = {
+    const migrationInput: MigrateGuestCartInput = {
       migrationId,
       items: [
-        { bookId, quantity: 2 },
-        { bookId: "book-456", quantity: 3 },
+        { bookId, quantity: 1 },
+        { bookId: "book-456", quantity: 1 },
       ],
     };
 
@@ -360,13 +401,12 @@ describe("Cart Service", () => {
       mockBookFindMany.mockResolvedValue([{ id: bookId }, { id: "book-456" }]);
 
       mockCartUpsert.mockResolvedValue({ id: cartId });
-      mockCartItemFindUnique.mockResolvedValue(null);
-      mockCartItemCreate.mockResolvedValue({});
+      mockCartItemUpsert.mockResolvedValue({});
       mockCartFindUniqueOrThrow.mockResolvedValue(sampleCart);
       mockCartMigrationCreate.mockResolvedValue({});
     });
 
-    it("migrates guest cart items into the user's cart", async () => {
+    it("migrates guest cart items with quantity 1", async () => {
       const result = await migrateGuestCart(userId, migrationInput);
 
       expect(mockCartMigrationCreate).toHaveBeenCalledWith({
@@ -389,47 +429,66 @@ describe("Cart Service", () => {
         },
       });
 
-      expect(mockCartItemCreate).toHaveBeenCalledTimes(2);
+      expect(mockCartItemUpsert).toHaveBeenCalledTimes(2);
 
-      expect(mockCartItemCreate).toHaveBeenNthCalledWith(1, {
-        data: {
+      expect(mockCartItemUpsert).toHaveBeenNthCalledWith(1, {
+        where: {
+          cartId_bookId: {
+            cartId,
+            bookId,
+          },
+        },
+        update: {},
+        create: {
           cartId,
           bookId,
-          quantity: 2,
+          quantity: 1,
         },
       });
 
-      expect(mockCartItemCreate).toHaveBeenNthCalledWith(2, {
-        data: {
+      expect(mockCartItemUpsert).toHaveBeenNthCalledWith(2, {
+        where: {
+          cartId_bookId: {
+            cartId,
+            bookId: "book-456",
+          },
+        },
+        update: {},
+        create: {
           cartId,
           bookId: "book-456",
-          quantity: 3,
+          quantity: 1,
         },
       });
 
       expect(result.id).toBe(cartId);
     });
 
-    it("merges guest quantities with existing account cart items", async () => {
-      mockCartItemFindUnique
-        .mockResolvedValueOnce({
-          id: "existing-item",
-          quantity: 2,
-        })
-        .mockResolvedValueOnce(null);
-
+    it("does not increase quantity when a migrated book already exists", async () => {
       await migrateGuestCart(userId, migrationInput);
 
-      expect(mockCartItemUpdate).toHaveBeenCalledWith({
-        where: {
-          id: "existing-item",
-        },
-        data: {
-          quantity: 4,
-        },
+      expect(mockCartItemUpsert).toHaveBeenCalledTimes(2);
+
+      for (const call of mockCartItemUpsert.mock.calls) {
+        expect(call[0].update).toEqual({});
+      }
+
+      expect(mockCartItemUpdate).not.toHaveBeenCalled();
+    });
+
+    it("rejects migration quantities other than 1", async () => {
+      await expect(
+        migrateGuestCart(userId, {
+          migrationId,
+          items: [{ bookId, quantity: 2 }],
+        }),
+      ).rejects.toMatchObject({
+        message: "Digital books can only have a quantity of 1.",
+        statusCode: 400,
       });
 
-      expect(mockCartItemCreate).toHaveBeenCalledTimes(1);
+      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(mockCartItemUpsert).not.toHaveBeenCalled();
     });
 
     it("rejects migration when one or more books are unavailable", async () => {
@@ -442,8 +501,7 @@ describe("Cart Service", () => {
         statusCode: 404,
       });
 
-      expect(mockCartItemCreate).not.toHaveBeenCalled();
-      expect(mockCartItemUpdate).not.toHaveBeenCalled();
+      expect(mockCartItemUpsert).not.toHaveBeenCalled();
     });
 
     it("does not add items again when the migration already exists", async () => {
@@ -488,26 +546,9 @@ describe("Cart Service", () => {
       });
 
       expect(mockBookFindMany).not.toHaveBeenCalled();
-      expect(mockCartItemCreate).not.toHaveBeenCalled();
-      expect(mockCartItemUpdate).not.toHaveBeenCalled();
+      expect(mockCartItemUpsert).not.toHaveBeenCalled();
 
       expect(result.id).toBe(cartId);
-    });
-
-    it("rejects when an existing cart item's quantity would exceed 99", async () => {
-      mockCartItemFindUnique.mockResolvedValue({
-        id: "existing-item",
-        quantity: 95,
-      });
-
-      await expect(
-        migrateGuestCart(userId, {
-          migrationId,
-          items: [{ bookId, quantity: 5 }],
-        }),
-      ).rejects.toBeInstanceOf(CartServiceError);
-
-      expect(mockCartItemUpdate).not.toHaveBeenCalled();
     });
 
     it("rejects a duplicate migration ID with a different payload", async () => {
@@ -538,7 +579,7 @@ describe("Cart Service", () => {
       });
 
       expect(mockBookFindMany).not.toHaveBeenCalled();
-      expect(mockCartItemCreate).not.toHaveBeenCalled();
+      expect(mockCartItemUpsert).not.toHaveBeenCalled();
     });
 
     it("rejects a legacy migration without a payload fingerprint", async () => {
@@ -569,7 +610,7 @@ describe("Cart Service", () => {
       });
 
       expect(mockBookFindMany).not.toHaveBeenCalled();
-      expect(mockCartItemCreate).not.toHaveBeenCalled();
+      expect(mockCartItemUpsert).not.toHaveBeenCalled();
     });
 
     it("accepts a retry when identical items are provided in a different order", async () => {
@@ -610,8 +651,7 @@ describe("Cart Service", () => {
       const result = await migrateGuestCart(userId, reorderedInput);
 
       expect(result.id).toBe(cartId);
-      expect(mockCartItemCreate).not.toHaveBeenCalled();
-      expect(mockCartItemUpdate).not.toHaveBeenCalled();
+      expect(mockCartItemUpsert).not.toHaveBeenCalled();
     });
   });
 });

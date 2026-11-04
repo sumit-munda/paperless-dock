@@ -80,8 +80,6 @@ function TestConsumer() {
     isLoading,
     error,
     addToCart,
-    increaseQuantity,
-    decreaseQuantity,
     removeFromCart,
     migrationPending,
     retryMigration,
@@ -102,19 +100,11 @@ function TestConsumer() {
 
       <button onClick={() => void addToCart("book-001")}>Add book</button>
 
-      <button onClick={() => void increaseQuantity("book-001")}>
-        Increase quantity
-      </button>
-
-      <button onClick={() => void decreaseQuantity("book-001")}>
-        Decrease quantity
-      </button>
-
       <button onClick={() => void removeFromCart("book-001")}>
         Remove book
       </button>
 
-      <button onClick={() => void retryMigration()}>Retry migration </button>
+      <button onClick={() => void retryMigration()}>Retry migration</button>
     </div>
   );
 }
@@ -137,6 +127,7 @@ beforeEach(() => {
   mockAddCartItem.mockResolvedValue(testCart);
   mockUpdateCartItem.mockResolvedValue(testCart);
   mockMigrateGuestCart.mockResolvedValue(testCart);
+
   mockRemoveCartItem.mockResolvedValue({
     ...testCart,
     items: [],
@@ -160,7 +151,7 @@ describe("CartContext", () => {
     expect(mockFetchCart).not.toHaveBeenCalled();
   });
 
-  it("restores guest cart items from localStorage", async () => {
+  it("normalizes legacy guest cart quantities to one", async () => {
     window.localStorage.setItem(
       "paperless-dock-cart",
       JSON.stringify([{ bookId: "book-001", quantity: 2 }]),
@@ -169,13 +160,13 @@ describe("CartContext", () => {
     renderCartProvider();
 
     await waitFor(() => {
-      expect(screen.getByTestId("item-book-001")).toHaveTextContent("2");
+      expect(screen.getByTestId("item-book-001")).toHaveTextContent("1");
     });
 
-    expect(screen.getByTestId("item-count")).toHaveTextContent("2");
+    expect(screen.getByTestId("item-count")).toHaveTextContent("1");
   });
 
-  it("adds a book to the guest cart", async () => {
+  it("adds a book to the guest cart with quantity one", async () => {
     renderCartProvider();
 
     await waitFor(() => {
@@ -190,37 +181,24 @@ describe("CartContext", () => {
     expect(screen.getByTestId("item-count")).toHaveTextContent("1");
   });
 
-  it("increases and decreases guest cart quantities", async () => {
+  it("does not add a duplicate book to the guest cart", async () => {
     window.localStorage.setItem(
       "paperless-dock-cart",
-      JSON.stringify([{ bookId: "book-001", quantity: 2 }]),
+      JSON.stringify([{ bookId: "book-001", quantity: 1 }]),
     );
 
     renderCartProvider();
 
     await waitFor(() => {
-      expect(screen.getByTestId("item-book-001")).toHaveTextContent("2");
+      expect(screen.getByTestId("item-book-001")).toHaveTextContent("1");
     });
 
     await act(async () => {
-      screen
-        .getByRole("button", {
-          name: "Increase quantity",
-        })
-        .click();
+      screen.getByRole("button", { name: "Add book" }).click();
     });
 
-    expect(screen.getByTestId("item-book-001")).toHaveTextContent("3");
-
-    await act(async () => {
-      screen
-        .getByRole("button", {
-          name: "Decrease quantity",
-        })
-        .click();
-    });
-
-    expect(screen.getByTestId("item-book-001")).toHaveTextContent("2");
+    expect(screen.getByTestId("item-book-001")).toHaveTextContent("1");
+    expect(screen.getByTestId("item-count")).toHaveTextContent("1");
   });
 
   it("removes a book from the guest cart", async () => {
@@ -243,7 +221,7 @@ describe("CartContext", () => {
     expect(screen.getByTestId("item-count")).toHaveTextContent("0");
   });
 
-  it("persists guest cart changes in localStorage", async () => {
+  it("persists normalized guest cart changes in localStorage", async () => {
     renderCartProvider();
 
     await waitFor(() => {
@@ -263,15 +241,15 @@ describe("CartContext", () => {
     });
   });
 
-  it("loads an authenticated user's cart from the API", async () => {
+  it("loads an authenticated user's cart with quantity one", async () => {
     renderCartProvider(accountAuthValue);
 
     await waitFor(() => {
-      expect(screen.getByTestId("item-book-001")).toHaveTextContent("2");
+      expect(screen.getByTestId("item-book-001")).toHaveTextContent("1");
     });
 
     expect(mockFetchCart).toHaveBeenCalledOnce();
-    expect(screen.getByTestId("item-count")).toHaveTextContent("2");
+    expect(screen.getByTestId("item-count")).toHaveTextContent("1");
   });
 
   it("adds a book through the API for an authenticated user", async () => {
@@ -286,25 +264,8 @@ describe("CartContext", () => {
     });
 
     expect(mockAddCartItem).toHaveBeenCalledWith("book-001");
-    expect(screen.getByTestId("item-count")).toHaveTextContent("2");
-  });
-
-  it("updates an authenticated user's cart quantity through the API", async () => {
-    renderCartProvider(accountAuthValue);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("item-book-001")).toHaveTextContent("2");
-    });
-
-    await act(async () => {
-      screen
-        .getByRole("button", {
-          name: "Increase quantity",
-        })
-        .click();
-    });
-
-    expect(mockUpdateCartItem).toHaveBeenCalledWith("book-001", 3);
+    expect(screen.getByTestId("item-count")).toHaveTextContent("1");
+    expect(screen.getByTestId("item-book-001")).toHaveTextContent("1");
   });
 
   it("removes an authenticated user's cart item through the API", async () => {
@@ -326,6 +287,11 @@ describe("CartContext", () => {
     const guestItems = [
       { bookId: "book-001", quantity: 2 },
       { bookId: "book-002", quantity: 3 },
+    ];
+
+    const normalizedItems = [
+      { bookId: "book-001", quantity: 1 },
+      { bookId: "book-002", quantity: 1 },
     ];
 
     window.localStorage.setItem(
@@ -353,7 +319,7 @@ describe("CartContext", () => {
 
     expect(mockMigrateGuestCart).toHaveBeenCalledWith({
       migrationId: expect.any(String),
-      items: guestItems,
+      items: normalizedItems,
     });
 
     await waitFor(() => {
@@ -370,6 +336,11 @@ describe("CartContext", () => {
     const guestItems = [
       { bookId: "book-001", quantity: 2 },
       { bookId: "book-002", quantity: 3 },
+    ];
+
+    const normalizedItems = [
+      { bookId: "book-001", quantity: 1 },
+      { bookId: "book-002", quantity: 1 },
     ];
 
     window.localStorage.setItem(
@@ -399,11 +370,7 @@ describe("CartContext", () => {
     });
 
     expect(mockFetchCart).toHaveBeenCalledOnce();
-    expect(screen.getByTestId("item-book-001")).toHaveTextContent("2");
-
-    expect(
-      JSON.parse(window.localStorage.getItem("paperless-dock-cart") ?? "[]"),
-    ).toEqual(guestItems);
+    expect(screen.getByTestId("item-book-001")).toHaveTextContent("1");
 
     const pendingMigration = JSON.parse(
       window.localStorage.getItem("paperless-dock-cart-migration-user-123") ??
@@ -414,14 +381,19 @@ describe("CartContext", () => {
       migrationId: expect.stringMatching(
         /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
       ),
-      items: guestItems,
+      items: normalizedItems,
     });
   });
 
-  it("retries a failed migration using the same migration ID", async () => {
+  it("retries a failed migration using the same migration ID and snapshot", async () => {
     const guestItems = [
       { bookId: "book-001", quantity: 2 },
       { bookId: "book-002", quantity: 3 },
+    ];
+
+    const normalizedItems = [
+      { bookId: "book-001", quantity: 1 },
+      { bookId: "book-002", quantity: 1 },
     ];
 
     window.localStorage.setItem(
@@ -453,7 +425,7 @@ describe("CartContext", () => {
 
     const firstMigration = mockMigrateGuestCart.mock.calls[0][0];
 
-    expect(firstMigration.items).toEqual(guestItems);
+    expect(firstMigration.items).toEqual(normalizedItems);
 
     cleanup();
 
@@ -583,10 +555,6 @@ describe("CartContext", () => {
 
     expect(savedMigration).toEqual(originalMigration);
 
-    expect(
-      JSON.parse(window.localStorage.getItem("paperless-dock-cart")!),
-    ).toEqual(guestItems);
-
     expect(mockMigrateGuestCart).toHaveBeenCalledTimes(2);
   });
 
@@ -596,7 +564,12 @@ describe("CartContext", () => {
     const updatedCart: Cart = {
       ...testCart,
       items: [
-        ...testCart.items,
+        {
+          id: "item-123",
+          bookId: "book-001",
+          quantity: 1,
+          book: testCart.items[0].book,
+        },
         {
           id: "item-456",
           bookId: "book-002",
@@ -612,7 +585,7 @@ describe("CartContext", () => {
           },
         },
       ],
-      itemCount: 5,
+      itemCount: 4,
     };
 
     window.localStorage.setItem(
@@ -651,8 +624,8 @@ describe("CartContext", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId("item-book-002")).toHaveTextContent("3");
-      expect(screen.getByTestId("item-count")).toHaveTextContent("5");
+      expect(screen.getByTestId("item-book-002")).toHaveTextContent("1");
+      expect(screen.getByTestId("item-count")).toHaveTextContent("2");
       expect(screen.getByTestId("migration-pending")).toHaveTextContent(
         "false",
       );
@@ -718,10 +691,15 @@ describe("CartContext", () => {
     ).toBeNull();
   });
 
-  it("reuses the original migration snapshot if guest cart data changes", async () => {
+  it("reuses the original normalized migration snapshot if guest cart data changes", async () => {
     const originalGuestItems = [
       { bookId: "book-001", quantity: 2 },
       { bookId: "book-002", quantity: 3 },
+    ];
+
+    const normalizedOriginalItems = [
+      { bookId: "book-001", quantity: 1 },
+      { bookId: "book-002", quantity: 1 },
     ];
 
     const changedGuestItems = [{ bookId: "book-003", quantity: 1 }];
@@ -755,6 +733,8 @@ describe("CartContext", () => {
 
     const firstMigration = mockMigrateGuestCart.mock.calls[0][0];
 
+    expect(firstMigration.items).toEqual(normalizedOriginalItems);
+
     window.localStorage.setItem(
       "paperless-dock-cart",
       JSON.stringify(changedGuestItems),
@@ -771,7 +751,7 @@ describe("CartContext", () => {
     const secondMigration = mockMigrateGuestCart.mock.calls[1][0];
 
     expect(secondMigration.migrationId).toBe(firstMigration.migrationId);
-    expect(secondMigration.items).toEqual(originalGuestItems);
+    expect(secondMigration.items).toEqual(normalizedOriginalItems);
     expect(secondMigration.items).not.toEqual(changedGuestItems);
   });
 
@@ -813,18 +793,12 @@ describe("CartContext", () => {
 
     await act(async () => {
       screen.getByRole("button", { name: "Add book" }).click();
-      screen.getByRole("button", { name: "Increase quantity" }).click();
-      screen.getByRole("button", { name: "Decrease quantity" }).click();
       screen.getByRole("button", { name: "Remove book" }).click();
     });
 
     expect(mockAddCartItem).not.toHaveBeenCalled();
     expect(mockUpdateCartItem).not.toHaveBeenCalled();
     expect(mockRemoveCartItem).not.toHaveBeenCalled();
-
-    expect(
-      JSON.parse(window.localStorage.getItem("paperless-dock-cart")!),
-    ).toEqual(guestItems);
 
     await act(async () => {
       resolveMigration(testCart);

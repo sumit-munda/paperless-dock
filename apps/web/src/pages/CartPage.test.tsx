@@ -51,16 +51,15 @@ beforeEach(() => {
   });
 
   mockedUseCart.mockReturnValue({
-    items: [{ bookId: "book-001", quantity: 2 }],
-    itemCount: 2,
+    items: [{ bookId: "book-001", quantity: 1 }],
+    itemCount: 1,
     isLoading: false,
     error: null,
     migrationPending: false,
     retryMigration: mockRetryMigration,
-    increaseQuantity: vi.fn(),
-    decreaseQuantity: vi.fn(),
     removeFromCart: vi.fn(),
     addToCart: vi.fn(),
+    checkout: vi.fn(),
   } as ReturnType<typeof useCart>);
 });
 
@@ -69,7 +68,7 @@ afterEach(() => {
 });
 
 describe("CartPage", () => {
-  it("displays the books in the cart", () => {
+  it("displays the books in the cart with a single-purchase subtotal", () => {
     renderCartPage();
 
     expect(
@@ -80,21 +79,22 @@ describe("CartPage", () => {
       screen.getByRole("heading", { name: "Atomic Habits" }),
     ).toBeInTheDocument();
 
-    expect(screen.getByText("₹998.00")).toBeInTheDocument();
+    expect(
+      screen.getByText("₹499.00", { selector: "strong" }),
+    ).toBeInTheDocument();
   });
 
   it("displays the migration notice when guest cart migration is pending", () => {
     mockedUseCart.mockReturnValue({
-      items: [{ bookId: "book-001", quantity: 2 }],
-      itemCount: 2,
+      items: [{ bookId: "book-001", quantity: 1 }],
+      itemCount: 1,
       isLoading: false,
       error: "Network error",
       migrationPending: true,
       retryMigration: mockRetryMigration,
-      increaseQuantity: vi.fn(),
-      decreaseQuantity: vi.fn(),
       removeFromCart: vi.fn(),
       addToCart: vi.fn(),
+      checkout: vi.fn(),
     } as ReturnType<typeof useCart>);
 
     renderCartPage();
@@ -119,23 +119,20 @@ describe("CartPage", () => {
 
   it("retries guest cart migration when the retry button is clicked", () => {
     mockedUseCart.mockReturnValue({
-      items: [{ bookId: "book-001", quantity: 2 }],
-      itemCount: 2,
+      items: [{ bookId: "book-001", quantity: 1 }],
+      itemCount: 1,
       isLoading: false,
       error: "Network error",
       migrationPending: true,
       retryMigration: mockRetryMigration,
-      increaseQuantity: vi.fn(),
-      decreaseQuantity: vi.fn(),
       removeFromCart: vi.fn(),
       addToCart: vi.fn(),
+      checkout: vi.fn(),
     } as ReturnType<typeof useCart>);
 
     renderCartPage();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Retry migration" }),
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Retry migration" }));
 
     expect(mockRetryMigration).toHaveBeenCalledTimes(1);
   });
@@ -148,17 +145,14 @@ describe("CartPage", () => {
       error: "Network error",
       migrationPending: true,
       retryMigration: mockRetryMigration,
-      increaseQuantity: vi.fn(),
-      decreaseQuantity: vi.fn(),
       removeFromCart: vi.fn(),
       addToCart: vi.fn(),
+      checkout: vi.fn(),
     } as ReturnType<typeof useCart>);
 
     renderCartPage();
 
-    expect(
-      screen.getByText(/Your cart is empty/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Your cart is empty/)).toBeInTheDocument();
 
     expect(
       screen.getByRole("button", { name: "Retry migration" }),
@@ -173,10 +167,9 @@ describe("CartPage", () => {
       error: null,
       migrationPending: false,
       retryMigration: mockRetryMigration,
-      increaseQuantity: vi.fn(),
-      decreaseQuantity: vi.fn(),
       removeFromCart: vi.fn(),
       addToCart: vi.fn(),
+      checkout: vi.fn(),
     } as ReturnType<typeof useCart>);
 
     renderCartPage();

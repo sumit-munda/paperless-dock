@@ -7,6 +7,9 @@ import authRouter from "./routes/auth.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import usersRouter from "./routes/users.routes.js";
 import cartRouter from "./routes/cart.routes.js";
+import checkoutRouter from "./routes/checkout.routes.js";
+import ordersRouter from "./routes/orders.routes.js";
+import razorpayWebhooksRouter from "./routes/razorpay-webhooks.routes.js";
 
 const app = express();
 
@@ -17,6 +20,14 @@ app.use(
   }),
 );
 
+// Razorpay webhook must receive the untouched raw request body.
+// This must be mounted before express.json().
+app.use(
+  "/api/webhooks/razorpay",
+  express.raw({ type: "application/json" }),
+  razorpayWebhooksRouter,
+);
+
 app.use(express.json());
 
 app.use(sessionMiddleware);
@@ -25,6 +36,8 @@ app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/cart", cartRouter);
+app.use("/api/checkout", checkoutRouter);
+app.use("/api/orders", ordersRouter);
 
 app.get("/health", (_req, res) => {
   res.json({

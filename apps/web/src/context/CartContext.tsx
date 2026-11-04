@@ -13,9 +13,13 @@ import {
   fetchCart,
   addCartItem as addCartItemRequest,
   migrateGuestCart as migrateGuestCartRequest,
-  updateCartItem as updateCartItemRequest,
   removeCartItem as removeCartItemRequest,
 } from "../api/cartApi";
+
+import {
+  createCheckoutOrder,
+  type CheckoutOrder,
+} from "../api/checkoutApi";
 
 export interface CartItem {
   bookId: string;
@@ -28,11 +32,10 @@ interface CartContextValue {
   isLoading: boolean;
   error: string | null;
   addToCart: (bookId: string) => Promise<void>;
-  increaseQuantity: (bookId: string) => Promise<void>;
-  decreaseQuantity: (bookId: string) => Promise<void>;
   removeFromCart: (bookId: string) => Promise<void>;
   migrationPending: boolean;
   retryMigration: () => Promise<void>;
+  checkout: () => Promise<CheckoutOrder>;
 }
 
 const CART_STORAGE_KEY = "paperless-dock-cart";
@@ -44,6 +47,37 @@ type CartMode = "loading" | "guest" | "account";
 interface PendingCartMigration {
   migrationId: string;
   items: CartItem[];
+}
+
+function normalizeCartItems(items: unknown): CartItem[] {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  const uniqueItems = new Map<string, CartItem>();
+
+  for (const item of items) {
+    if (
+      typeof item !== "object" ||
+      item === null ||
+      !("bookId" in item) ||
+      typeof item.bookId !== "string" ||
+      item.bookId.trim().length === 0
+    ) {
+      continue;
+    }
+
+    const bookId = item.bookId.trim();
+
+    if (!uniqueItems.has(bookId)) {
+      uniqueItems.set(bookId, {
+        bookId,
+        quantity: 1,
+      });
+    }
+  }
+
+  return Array.from(uniqueItems.values());
 }
 
 function loadCartItems(): CartItem[] {
@@ -60,20 +94,7 @@ function loadCartItems(): CartItem[] {
 
     const parsedCart: unknown = JSON.parse(savedCart);
 
-    if (!Array.isArray(parsedCart)) {
-      return [];
-    }
-
-    return parsedCart.filter(
-      (item): item is CartItem =>
-        typeof item === "object" &&
-        item !== null &&
-        typeof item.bookId === "string" &&
-        item.bookId.trim().length > 0 &&
-        Number.isSafeInteger(item.quantity) &&
-        item.quantity > 0 &&
-        item.quantity <= 99,
-    );
+    return normalizeCartItems(parsedCart);
   } catch {
     return [];
   }
@@ -81,7 +102,10 @@ function loadCartItems(): CartItem[] {
 
 function saveCartItems(items: CartItem[]) {
   try {
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+    window.localStorage.setItem(
+      CART_STORAGE_KEY,
+      JSON.stringify(items),
+    );
   } catch {
     // Ignore storage errors.
   }
@@ -141,28 +165,29 @@ export const CartProvider = ({ children }: CartProviderProps) => {
           parsed !== null &&
           "migrationId" in parsed &&
           typeof parsed.migrationId === "string" &&
-          crypto.randomUUID() &&
           /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
             parsed.migrationId,
           ) &&
           "items" in parsed &&
           Array.isArray(parsed.items) &&
           parsed.items.length > 0 &&
-          parsed.items.length <= 100 &&
-          parsed.items.every(
-            (item) =>
-              typeof item === "object" &&
-              item !== null &&
-              "bookId" in item &&
-              typeof item.bookId === "string" &&
-              item.bookId.trim().length > 0 &&
-              "quantity" in item &&
-              Number.isSafeInteger(item.quantity) &&
-              item.quantity >= 1 &&
-              item.quantity <= 99,
-          )
+          parsed.items.length <= 100
         ) {
-          return parsed as PendingCartMigration;
+          const normalizedItems = normalizeCartItems(parsed.items);
+
+          if (normalizedItems.length > 0) {
+            const migration: PendingCartMigration = {
+              migrationId: parsed.migrationId,
+              items: normalizedItems,
+            };
+
+            window.localStorage.setItem(
+              key,
+              JSON.stringify(migration),
+            );
+
+            return migration;
+          }
         }
       }
 
@@ -217,7 +242,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         return;
       }
 
-      // Migration succeeded. It should no longer be marked as pending.
       setMigrationPending(false);
 
       const updatedCart = await fetchCart();
@@ -226,7 +250,8 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         return;
       }
 
-      setItems(updatedCart.items);
+      // Normalize refreshed account cart items as well.
+      updateItems(normalizeCartItems(updatedCart.items));
     } catch (err) {
       if (userIdRef.current === currentUserId) {
         if (!migrationSucceeded) {
@@ -296,12 +321,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
           return;
         }
 
-        updateItems(
-          cart.items.map((item) => ({
-            bookId: item.bookId,
-            quantity: item.quantity,
-          })),
-        );
+        updateItems(normalizeCartItems(cart.items));
 
         setMode("account");
       } catch (err) {
@@ -356,12 +376,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         return;
       }
 
-      updateItems(
-        updatedCart.items.map((item) => ({
-          bookId: item.bookId,
-          quantity: item.quantity,
-        })),
-      );
+      updateItems(normalizeCartItems(updatedCart.items));
     });
 
     const handledTask = task.catch((err: unknown) => {
@@ -382,8 +397,12 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       return;
     }
 
+    const normalizedBookId = bookId.trim();
+
     if (mode === "account") {
-      await runAccountOperation(() => addCartItemRequest(bookId));
+      await runAccountOperation(() =>
+        addCartItemRequest(normalizedBookId),
+      );
 
       return;
     }
@@ -393,92 +412,21 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     }
 
     const existingItem = itemsRef.current.find(
-      (item) => item.bookId === bookId,
+      (item) => item.bookId === normalizedBookId,
     );
 
-    if (!existingItem) {
-      updateItems([...itemsRef.current, { bookId, quantity: 1 }]);
-
+    // Digital books can only appear once in the cart.
+    if (existingItem) {
       return;
     }
 
-    if (existingItem.quantity >= 99) {
-      return;
-    }
-
-    updateItems(
-      itemsRef.current.map((item) =>
-        item.bookId === bookId
-          ? { ...item, quantity: item.quantity + 1 }
-          : item,
-      ),
-    );
-  }
-
-  async function increaseQuantity(bookId: string) {
-    if (mode === "account") {
-      await runAccountOperation((currentItems) => {
-        const item = currentItems.find(
-          (cartItem) => cartItem.bookId === bookId,
-        );
-
-        if (!item || item.quantity >= 99) {
-          return Promise.resolve({ items: currentItems });
-        }
-
-        return updateCartItemRequest(bookId, item.quantity + 1);
-      });
-
-      return;
-    }
-
-    if (mode !== "guest" || migrationPending) {
-      return;
-    }
-
-    updateItems(
-      itemsRef.current.map((item) =>
-        item.bookId === bookId && item.quantity < 99
-          ? { ...item, quantity: item.quantity + 1 }
-          : item,
-      ),
-    );
-  }
-
-  async function decreaseQuantity(bookId: string) {
-    if (mode === "account") {
-      await runAccountOperation((currentItems) => {
-        const item = currentItems.find(
-          (cartItem) => cartItem.bookId === bookId,
-        );
-
-        if (!item) {
-          return Promise.resolve({ items: currentItems });
-        }
-
-        if (item.quantity <= 1) {
-          return removeCartItemRequest(bookId);
-        }
-
-        return updateCartItemRequest(bookId, item.quantity - 1);
-      });
-
-      return;
-    }
-
-    if (mode !== "guest" || migrationPending) {
-      return;
-    }
-
-    updateItems(
-      itemsRef.current
-        .map((item) =>
-          item.bookId === bookId
-            ? { ...item, quantity: item.quantity - 1 }
-            : item,
-        )
-        .filter((item) => item.quantity > 0),
-    );
+    updateItems([
+      ...itemsRef.current,
+      {
+        bookId: normalizedBookId,
+        quantity: 1,
+      },
+    ]);
   }
 
   async function removeFromCart(bookId: string) {
@@ -495,7 +443,63 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     updateItems(itemsRef.current.filter((item) => item.bookId !== bookId));
   }
 
-  const itemCount = items.reduce((total, item) => total + item.quantity, 0);
+  async function checkout(): Promise<CheckoutOrder> {
+    const userId = userIdRef.current;
+
+    if (!userId || mode !== "account") {
+      throw new Error("Please log in before checking out.");
+    }
+
+    if (isLoading) {
+      throw new Error("Your cart is still loading. Please try again.");
+    }
+
+    if (migrationPending) {
+      throw new Error(
+        "Please complete your guest cart migration before checking out.",
+      );
+    }
+
+    const task = operationQueueRef.current.then(async () => {
+      if (userIdRef.current !== userId || mode !== "account") {
+        throw new Error(
+          "Your account changed. Please refresh your cart and try again.",
+        );
+      }
+
+      const order = await createCheckoutOrder();
+
+      if (userIdRef.current !== userId) {
+        throw new Error(
+          "Your account changed while checkout was processing.",
+        );
+      }
+
+      updateItems([]);
+
+      return order;
+    });
+
+    // Keep the queue usable even if checkout fails.
+    operationQueueRef.current = task.then(
+      () => undefined,
+      () => undefined,
+    );
+
+    try {
+      const order = await task;
+      setError(null);
+      return order;
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to create your order.",
+      );
+
+      throw err;
+    }
+  }
+
+  const itemCount = items.length;
 
   return (
     <CartContext.Provider
@@ -505,11 +509,10 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         isLoading,
         error,
         addToCart,
-        increaseQuantity,
-        decreaseQuantity,
         removeFromCart,
         migrationPending,
         retryMigration,
+        checkout,
       }}
     >
       {children}

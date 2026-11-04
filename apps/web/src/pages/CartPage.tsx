@@ -1,26 +1,54 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
 import { useCart } from "../context/CartContext";
 import { useBooks } from "../hooks/useBooks";
 
 const CartPage = () => {
   const {
     items,
-    increaseQuantity,
-    decreaseQuantity,
     removeFromCart,
     isLoading,
     error,
     migrationPending,
     retryMigration,
+    checkout,
   } = useCart();
 
   const { books } = useBooks();
+  const navigate = useNavigate();
+
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const subtotal = items.reduce((total, item) => {
     const book = books.find((candidate) => candidate.id === item.bookId);
 
-    return total + (book ? book.price * item.quantity : 0);
+    return total + (book ? book.price : 0);
   }, 0);
+
+  async function handleCheckout() {
+    if (isCheckingOut || migrationPending || items.length === 0) {
+      return;
+    }
+
+    setIsCheckingOut(true);
+    setCheckoutError(null);
+
+    try {
+      const order = await checkout();
+
+      navigate(`/orders/${order.id}`);
+    } catch (err) {
+      setCheckoutError(
+        err instanceof Error
+          ? err.message
+          : "Unable to create your order. Please try again.",
+      );
+    } finally {
+      setIsCheckingOut(false);
+    }
+  }
 
   const migrationNotice = migrationPending ? (
     <div className="cart-migration-notice">
@@ -93,7 +121,7 @@ const CartPage = () => {
 
       {migrationNotice}
 
-      <p>Review your books and adjust quantities before checkout.</p>
+      <p>Review your selected books before checkout.</p>
 
       <div className="cart-items">
         {items.map((item) => {
@@ -110,7 +138,7 @@ const CartPage = () => {
                   <button
                     type="button"
                     className="remove-item-button"
-                    onClick={() => removeFromCart(item.bookId)}
+                    onClick={() => void removeFromCart(item.bookId)}
                   >
                     Remove
                   </button>
@@ -118,8 +146,6 @@ const CartPage = () => {
               </article>
             );
           }
-
-          const itemTotal = book.price * item.quantity;
 
           return (
             <article className="cart-item" key={item.bookId}>
@@ -134,42 +160,20 @@ const CartPage = () => {
 
                 <p>By {book.author}</p>
 
-                <p>Price: ₹{book.price.toFixed(2)} </p>
+                <p>Price: ₹{book.price.toFixed(2)}</p>
 
-                <div
-                  className="quantity-controls"
-                  aria-label={`Quantity controls for ${book.title}`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => decreaseQuantity(book.id)}
-                    aria-label={`Decrease quantity of ${book.title}`}
-                  >
-                    -
-                  </button>
-
-                  <span aria-live="polite">{item.quantity}</span>
-
-                  <button
-                    type="button"
-                    onClick={() => increaseQuantity(book.id)}
-                    disabled={item.quantity >= 99}
-                    aria-label={`Increase quantity of ${book.title}`}
-                  >
-                    +
-                  </button>
-                </div>
+                <p>Digital edition · Single purchase</p>
 
                 <button
                   type="button"
                   className="remove-item-button"
-                  onClick={() => removeFromCart(book.id)}
+                  onClick={() => void removeFromCart(book.id)}
                 >
                   Remove
                 </button>
               </div>
 
-              <p className="cart-item-total">₹ {itemTotal.toFixed(2)}</p>
+              <p className="cart-item-total">₹{book.price.toFixed(2)}</p>
             </article>
           );
         })}
@@ -183,12 +187,24 @@ const CartPage = () => {
           <strong>₹{subtotal.toFixed(2)}</strong>
         </p>
 
+        {checkoutError && (
+          <p role="alert" className="checkout-error">
+            {checkoutError}
+          </p>
+        )}
+
         <p className="checkout-note">
-          Checkout will be available in a future step.
+          Your order will be created with payment pending. No library access
+          will be granted until payment is verified.
         </p>
 
-        <button type="button" className="button" disabled>
-          Proceed to Checkout
+        <button
+          type="button"
+          className="button"
+          onClick={() => void handleCheckout()}
+          disabled={isCheckingOut || migrationPending}
+        >
+          {isCheckingOut ? "Creating Order..." : "Proceed to Checkout"}
         </button>
 
         <Link to="/books" className="continue-shopping-link">

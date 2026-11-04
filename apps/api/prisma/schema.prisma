@@ -8,20 +8,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//1.  Roles that a user can have.
+// 1. Roles that a user can have.
 enum UserRole {
   CUSTOMER
   ADMIN
 }
 
-//2. Possilbe publication states of a book.
+// 2. Possible publication states of a book.
 enum BookStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
 }
 
-//3. Possible states of an order.
+// 3. Possible states of an order.
 enum OrderStatus {
   PENDING
   COMPLETED
@@ -29,7 +29,7 @@ enum OrderStatus {
   REFUNDED
 }
 
-//4. Possible payment states.
+// 4. Possible payment states of an order.
 enum PaymentStatus {
   PENDING
   PAID
@@ -37,14 +37,35 @@ enum PaymentStatus {
   REFUNDED
 }
 
-//5. Publication states of a review.
+// 5. Payment providers.
+enum PaymentProvider {
+  RAZORPAY
+}
+
+// 6. Possible states of an individual payment attempt.
+enum PaymentAttemptStatus {
+  CREATED
+  AUTHORIZED
+  CAPTURED
+  FAILED
+}
+
+// 7. Processing states of a payment webhook event.
+enum WebhookProcessingStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+// 8. Publication states of a review.
 enum ReviewStatus {
   PENDING
   APPROVED
   REJECTED
 }
 
-//6. Customer and administrator accounts.
+// 9. Customer and administrator accounts.
 model User {
   id              String            @id @default(uuid())
   name            String
@@ -63,7 +84,7 @@ model User {
   cartMigrations  CartMigration[]
 }
 
-//7. Main bibiographic information for a book.
+// 10. Main bibliographic information for a book.
 model Book {
   id               String            @id
   title            String
@@ -97,7 +118,7 @@ model Book {
   @@index([title])
 }
 
-//8. Author profiles.
+// 11. Author profiles.
 model Author {
   id        String       @id @default(uuid())
   name      String
@@ -111,18 +132,18 @@ model Author {
   @@index([name])
 }
 
-//9. Connects books and authors in a many-to-many relationship.
+// 12. Connects books and authors in a many-to-many relationship.
 model BookAuthor {
   bookId   String
   authorId String
-  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  book     Book   @relation(fields: [bookId], references: [id], onDelete: Restrict)
   author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@id([bookId, authorId])
   @@index([authorId])
 }
 
-//10. Resuable book categories.
+// 13. Reusable book categories.
 model Category {
   id          String         @id @default(uuid())
   name        String         @unique
@@ -132,7 +153,7 @@ model Category {
   createdAt   DateTime       @default(now())
 }
 
-//11. Connects books and categories in a many-to-many relationship.
+// 14. Connects books and categories in a many-to-many relationship.
 model BookCategory {
   bookId     String
   categoryId String
@@ -143,7 +164,7 @@ model BookCategory {
   @@index([categoryId])
 }
 
-//12. Publisher information.
+// 15. Publisher information.
 model Publisher {
   id        String   @id @default(uuid())
   name      String   @unique
@@ -151,32 +172,32 @@ model Publisher {
   books     Book[]
 }
 
-//13. Stores customer orders.
+// 16. Stores customer orders.
 model Order {
-  id               String        @id @default(uuid())
-  userId           String
-  user             User          @relation(fields: [userId], references: [id], onDelete: Restrict)
-  subtotal         Decimal       @db.Decimal(10, 2)
-  currency         String        @default("INR") @db.VarChar(3)
-  status           OrderStatus   @default(PENDING)
-  paymentStatus    PaymentStatus @default(PENDING)
-  paymentReference String?       @unique
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  items            OrderItem[]
-  libraryItems     LibraryItem[]
+  id              String           @id @default(uuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  subtotal        Decimal          @db.Decimal(10, 2)
+  currency        String           @default("INR") @db.VarChar(3)
+  status          OrderStatus      @default(PENDING)
+  paymentStatus   PaymentStatus    @default(PENDING)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  items           OrderItem[]
+  libraryItems    LibraryItem[]
+  paymentAttempts PaymentAttempt[]
 
   @@index([userId])
   @@index([status])
 }
 
-//14. Individual books within an order.
+// 17. Individual books within an order.
 model OrderItem {
   id            String   @id @default(uuid())
   orderId       String
   order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   bookId        String
-  book          Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  book          Book     @relation(fields: [bookId], references: [id], onDelete: Restrict)
   titleSnapshot String
   priceSnapshot Decimal  @db.Decimal(10, 2)
   quantity      Int      @default(1)
@@ -186,7 +207,45 @@ model OrderItem {
   @@index([bookId])
 }
 
-//15. Represents a book that a user can access in their library.
+// 18. Tracks individual payment attempts for an order.
+model PaymentAttempt {
+  id                 String               @id @default(uuid())
+  orderId            String
+  order              Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider           PaymentProvider      @default(RAZORPAY)
+  providerOrderId    String               @unique
+  providerPaymentId  String?              @unique
+  amount             Decimal              @db.Decimal(10, 2)
+  currency           String               @default("INR") @db.VarChar(3)
+  status             PaymentAttemptStatus @default(CREATED)
+  failureCode        String?
+  failureDescription String?              @db.Text
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  capturedAt         DateTime?
+
+  @@index([orderId])
+  @@index([status])
+}
+
+// 19. Records incoming payment webhook events.
+model PaymentWebhookEvent {
+  id              String                  @id @default(uuid())
+  provider        PaymentProvider         @default(RAZORPAY)
+  providerEventId String
+  eventType       String
+  payload         Json
+  status          WebhookProcessingStatus @default(RECEIVED)
+  processingError String?                 @db.Text
+  processedAt     DateTime?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@unique([provider, providerEventId])
+  @@index([status, createdAt])
+}
+
+// 20. Represents a book that a user can access in their library.
 model LibraryItem {
   id          String   @id @default(uuid())
   userId      String
@@ -202,7 +261,7 @@ model LibraryItem {
   @@index([orderId])
 }
 
-//16. Stores the latest saved reading location for each user and book.
+// 21. Stores the latest saved reading location for each user and book.
 model ReadingProgress {
   id         String   @id @default(uuid())
   userId     String
@@ -218,7 +277,7 @@ model ReadingProgress {
   @@index([userId, lastReadAt])
 }
 
-//17. Stores customer reviews of books.
+// 22. Stores customer reviews of books.
 model Review {
   id        String       @id @default(uuid())
   userId    String
@@ -236,7 +295,7 @@ model Review {
   @@index([bookId, status])
 }
 
-//18. Stores books that users have saved to their wishlists.
+// 23. Stores books that users have saved to their wishlists.
 model WishlistItem {
   id       String   @id @default(uuid())
   userId   String
@@ -249,7 +308,7 @@ model WishlistItem {
   @@index([userId])
 }
 
-//19. Stores a user's shopping cart.
+// 24. Stores a user's shopping cart.
 model Cart {
   id        String     @id @default(uuid())
   userId    String     @unique
@@ -259,7 +318,7 @@ model Cart {
   updatedAt DateTime   @updatedAt
 }
 
-//20. Stores individual books in a shopping cart.
+// 25. Stores individual books in a shopping cart.
 model CartItem {
   id        String   @id @default(uuid())
   cartId    String
@@ -274,7 +333,7 @@ model CartItem {
   @@index([bookId])
 }
 
-//21. Stores Express authentication sessions.
+// 26. Stores Express authentication sessions.
 model Session {
   sid    String   @id(map: "session_pkey") @db.VarChar
   sess   Json
@@ -284,7 +343,7 @@ model Session {
   @@map("session")
 }
 
-//22. Records completed guest-cart migrations for each user.
+// 27. Records completed guest-cart migrations for each user.
 model CartMigration {
   id          String   @id @default(uuid())
   userId      String

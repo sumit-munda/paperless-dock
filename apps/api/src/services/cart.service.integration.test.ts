@@ -25,7 +25,8 @@ describe("Cart migration PostgreSQL integration tests", () => {
         id,
         title: `Integration Test Book ${index + 1}`,
         slug: `integration-test-book-${id}`,
-        description: "Temporary book created for PostgreSQL integration tests.",
+        description:
+          "Temporary book created for PostgreSQL integration tests.",
         price: "199.00",
         currency: "INR",
         status: "PUBLISHED",
@@ -93,7 +94,7 @@ describe("Cart migration PostgreSQL integration tests", () => {
     expect(cart).toBeNull();
   });
 
-  it("rolls back earlier cart changes when a later item exceeds quantity 99", async () => {
+  it("rejects quantities greater than one without changing the existing cart", async () => {
     const migrationId = randomUUID();
 
     const firstBookId = bookIds[0];
@@ -109,7 +110,7 @@ describe("Cart migration PostgreSQL integration tests", () => {
         items: {
           create: {
             bookId: secondBookId,
-            quantity: 98,
+            quantity: 1,
           },
         },
       },
@@ -121,7 +122,7 @@ describe("Cart migration PostgreSQL integration tests", () => {
         items: [
           {
             bookId: firstBookId,
-            quantity: 2,
+            quantity: 1,
           },
           {
             bookId: secondBookId,
@@ -158,7 +159,7 @@ describe("Cart migration PostgreSQL integration tests", () => {
 
     expect(cart?.items[0]).toMatchObject({
       bookId: secondBookId,
-      quantity: 98,
+      quantity: 1,
     });
   });
 
@@ -180,7 +181,7 @@ describe("Cart migration PostgreSQL integration tests", () => {
       items: [
         {
           bookId: firstBookId,
-          quantity: 3,
+          quantity: 1,
         },
       ],
     };
@@ -195,12 +196,12 @@ describe("Cart migration PostgreSQL integration tests", () => {
 
     expect(firstResult.items[0]).toMatchObject({
       bookId: firstBookId,
-      quantity: 3,
+      quantity: 1,
     });
 
     expect(secondResult.items[0]).toMatchObject({
       bookId: firstBookId,
-      quantity: 3,
+      quantity: 1,
     });
 
     const migrationRecords = await prisma.cartMigration.count({
@@ -221,9 +222,10 @@ describe("Cart migration PostgreSQL integration tests", () => {
 
     expect(migrationRecords).toBe(1);
     expect(cart?.items).toHaveLength(1);
+
     expect(cart?.items[0]).toMatchObject({
       bookId: firstBookId,
-      quantity: 3,
+      quantity: 1,
     });
   });
 
@@ -244,7 +246,7 @@ describe("Cart migration PostgreSQL integration tests", () => {
       items: [
         {
           bookId: firstBookId,
-          quantity: 3,
+          quantity: 1,
         },
       ],
     };
@@ -258,12 +260,12 @@ describe("Cart migration PostgreSQL integration tests", () => {
 
     expect(firstResult.items[0]).toMatchObject({
       bookId: firstBookId,
-      quantity: 3,
+      quantity: 1,
     });
 
     expect(secondResult.items[0]).toMatchObject({
       bookId: firstBookId,
-      quantity: 3,
+      quantity: 1,
     });
 
     const migrationRecords = await prisma.cartMigration.count({
@@ -282,10 +284,12 @@ describe("Cart migration PostgreSQL integration tests", () => {
     });
 
     const migrationId = randomUUID();
-    const firstBookId = bookIds[0];
 
-    if (!firstBookId) {
-      throw new Error("A test book is required.");
+    const firstBookId = bookIds[0];
+    const secondBookId = bookIds[1];
+
+    if (!firstBookId || !secondBookId) {
+      throw new Error("Two published books are required.");
     }
 
     await migrateGuestCart(userId, {
@@ -293,7 +297,7 @@ describe("Cart migration PostgreSQL integration tests", () => {
       items: [
         {
           bookId: firstBookId,
-          quantity: 3,
+          quantity: 1,
         },
       ],
     });
@@ -303,8 +307,8 @@ describe("Cart migration PostgreSQL integration tests", () => {
         migrationId,
         items: [
           {
-            bookId: firstBookId,
-            quantity: 5,
+            bookId: secondBookId,
+            quantity: 1,
           },
         ],
       }),
@@ -318,9 +322,10 @@ describe("Cart migration PostgreSQL integration tests", () => {
     });
 
     expect(cart?.items).toHaveLength(1);
+
     expect(cart?.items[0]).toMatchObject({
       bookId: firstBookId,
-      quantity: 3,
+      quantity: 1,
     });
 
     const migrationRecords = await prisma.cartMigration.count({
@@ -359,7 +364,7 @@ describe("Cart migration PostgreSQL integration tests", () => {
         items: [
           {
             bookId: firstBookId,
-            quantity: 3,
+            quantity: 1,
           },
         ],
       }),

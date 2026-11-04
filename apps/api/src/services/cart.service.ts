@@ -47,7 +47,9 @@ const cartInclude = {
   },
 } satisfies Prisma.CartInclude;
 
-type CartWithItems = Prisma.CartGetPayload<{ include: typeof cartInclude }>;
+type CartWithItems = Prisma.CartGetPayload<{
+  include: typeof cartInclude;
+}>;
 
 function formatCart(cart: CartWithItems) {
   const items = cart.items.map((item) => ({
@@ -61,20 +63,27 @@ function formatCart(cart: CartWithItems) {
       price: Number(item.book.price),
       currency: item.book.currency,
       coverImage: item.book.coverImage,
-      author: item.book.authors.map((entry) => entry.author.name).join(", "),
+      author: item.book.authors
+        .map((entry) => entry.author.name)
+        .join(", "),
     },
   }));
 
   return {
     id: cart.id,
     items,
-    itemCount: items.reduce((total, item) => total + item.quantity, 0),
+    itemCount: items.reduce(
+      (total, item) => total + item.quantity,
+      0,
+    ),
     createdAt: cart.createdAt,
     updatedAt: cart.updatedAt,
   };
 }
 
-function createMigrationPayloadHash(input: MigrateGuestCartInput): string {
+function createMigrationPayloadHash(
+  input: MigrateGuestCartInput,
+): string {
   const normalizedItems = [...input.items].sort((a, b) =>
     a.bookId.localeCompare(b.bookId),
   );
@@ -82,6 +91,29 @@ function createMigrationPayloadHash(input: MigrateGuestCartInput): string {
   return createHash("sha256")
     .update(JSON.stringify(normalizedItems))
     .digest("hex");
+}
+
+function assertQuantityOne(quantity: number) {
+  if (quantity !== 1) {
+    throw new CartServiceError(
+      "Digital books can only have a quantity of 1.",
+      400,
+    );
+  }
+}
+
+async function lockCart(
+  tx: Prisma.TransactionClient,
+  cartId: string,
+) {
+  await tx.$queryRaw<{ id: string }[]>(
+    Prisma.sql`
+      SELECT "id"
+      FROM "Cart"
+      WHERE "id" = ${cartId}
+      FOR UPDATE
+    `,
+  );
 }
 
 async function findCartByUserId(userId: string) {
@@ -123,7 +155,12 @@ export async function getCart(userId: string) {
   return formatCart(cartWithItems);
 }
 
-export async function addItemToCart(userId: string, input: AddCartItemInput) {
+export async function addItemToCart(
+  userId: string,
+  input: AddCartItemInput,
+) {
+  assertQuantityOne(input.quantity);
+
   const updatedCart = await prisma.$transaction(async (tx) => {
     const book = await tx.book.findFirst({
       where: {
@@ -136,7 +173,10 @@ export async function addItemToCart(userId: string, input: AddCartItemInput) {
     });
 
     if (!book) {
-      throw new CartServiceError("Book not found or unavailable.", 404);
+      throw new CartServiceError(
+        "Book not found or unavailable.",
+        404,
+      );
     }
 
     const cart = await tx.cart.upsert({
@@ -152,43 +192,22 @@ export async function addItemToCart(userId: string, input: AddCartItemInput) {
       },
     });
 
-    const existingItem = await tx.cartItem.findUnique({
+    await lockCart(tx, cart.id);
+
+    await tx.cartItem.upsert({
       where: {
         cartId_bookId: {
           cartId: cart.id,
           bookId: book.id,
         },
       },
-      select: {
-        id: true,
-        quantity: true,
+      update: {},
+      create: {
+        cartId: cart.id,
+        bookId: book.id,
+        quantity: 1,
       },
     });
-
-    if (existingItem) {
-      const newQuantity = existingItem.quantity + input.quantity;
-
-      if (newQuantity > 99) {
-        throw new CartServiceError("Cart item quantity cannot exceed 99.", 400);
-      }
-
-      await tx.cartItem.update({
-        where: {
-          id: existingItem.id,
-        },
-        data: {
-          quantity: newQuantity,
-        },
-      });
-    } else {
-      await tx.cartItem.create({
-        data: {
-          cartId: cart.id,
-          bookId: book.id,
-          quantity: input.quantity,
-        },
-      });
-    }
 
     return tx.cart.findUniqueOrThrow({
       where: {
@@ -206,69 +225,139 @@ export async function updateCartItem(
   bookId: string,
   input: UpdateCartItemInput,
 ) {
-  const cart = await findCartByUserId(userId);
+  assertQuantityOne(input.quantity);
 
-  const result = await prisma.cartItem.updateMany({
-    where: {
-      cartId: cart.id,
-      bookId,
-    },
-    data: {
-      quantity: input.quantity,
-    },
+  const updatedCart = await prisma.$transaction(async (tx) => {
+    const cart = await tx.cart.findUnique({
+      where: {
+        userId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!cart) {
+      throw new CartServiceError("Cart not found.", 404);
+    }
+
+    await lockCart(tx, cart.id);
+
+    const result = await tx.cartItem.updateMany({
+      where: {
+        cartId: cart.id,
+        bookId,
+      },
+      data: {
+        quantity: 1,
+      },
+    });
+
+    if (result.count === 0) {
+      throw new CartServiceError(
+        "Cart item not found.",
+        404,
+      );
+    }
+
+    return tx.cart.findUniqueOrThrow({
+      where: {
+        id: cart.id,
+      },
+      include: cartInclude,
+    });
   });
 
-  if (result.count === 0) {
-    throw new CartServiceError("Cart item not found.", 404);
-  }
-
-  return getCart(userId);
+  return formatCart(updatedCart);
 }
 
-export async function removeCartItem(userId: string, bookId: string) {
-  const cart = await findCartByUserId(userId);
+export async function removeCartItem(
+  userId: string,
+  bookId: string,
+) {
+  const updatedCart = await prisma.$transaction(async (tx) => {
+    const cart = await tx.cart.findUnique({
+      where: {
+        userId,
+      },
+      select: {
+        id: true,
+      },
+    });
 
-  const result = await prisma.cartItem.deleteMany({
-    where: {
-      cartId: cart.id,
-      bookId,
-    },
+    if (!cart) {
+      throw new CartServiceError("Cart not found.", 404);
+    }
+
+    await lockCart(tx, cart.id);
+
+    const result = await tx.cartItem.deleteMany({
+      where: {
+        cartId: cart.id,
+        bookId,
+      },
+    });
+
+    if (result.count === 0) {
+      throw new CartServiceError(
+        "Cart item not found.",
+        404,
+      );
+    }
+
+    return tx.cart.findUniqueOrThrow({
+      where: {
+        id: cart.id,
+      },
+      include: cartInclude,
+    });
   });
 
-  if (result.count === 0) {
-    throw new CartServiceError("Cart item not found.", 404);
-  }
-
-  return getCart(userId);
+  return formatCart(updatedCart);
 }
 
 export async function clearCart(userId: string) {
-  const cart = await prisma.cart.upsert({
-    where: {
-      userId,
-    },
-    update: {},
-    create: {
-      userId,
-    },
-    select: {
-      id: true,
-    },
+  const updatedCart = await prisma.$transaction(async (tx) => {
+    const cart = await tx.cart.upsert({
+      where: {
+        userId,
+      },
+      update: {},
+      create: {
+        userId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await lockCart(tx, cart.id);
+
+    await tx.cartItem.deleteMany({
+      where: {
+        cartId: cart.id,
+      },
+    });
+
+    return tx.cart.findUniqueOrThrow({
+      where: {
+        id: cart.id,
+      },
+      include: cartInclude,
+    });
   });
 
-  await prisma.cartItem.deleteMany({
-    where: {
-      cartId: cart.id,
-    },
-  });
-
-  return getCart(userId);
+  return formatCart(updatedCart);
 }
 
 export async function migrateGuestCart(
   userId: string,
   input: MigrateGuestCartInput,
 ) {
+  for (const item of input.items) {
+    assertQuantityOne(item.quantity);
+  }
+
   const payloadHash = createMigrationPayloadHash(input);
 
   try {
@@ -294,7 +383,10 @@ export async function migrateGuestCart(
       });
 
       if (books.length !== input.items.length) {
-        throw new CartServiceError("One or more books are unavailable.", 404);
+        throw new CartServiceError(
+          "One or more books are unavailable.",
+          404,
+        );
       }
 
       const cart = await tx.cart.upsert({
@@ -310,47 +402,23 @@ export async function migrateGuestCart(
         },
       });
 
+      await lockCart(tx, cart.id);
+
       for (const item of input.items) {
-        const existingItem = await tx.cartItem.findUnique({
+        await tx.cartItem.upsert({
           where: {
             cartId_bookId: {
               cartId: cart.id,
               bookId: item.bookId,
             },
           },
-          select: {
-            id: true,
-            quantity: true,
+          update: {},
+          create: {
+            cartId: cart.id,
+            bookId: item.bookId,
+            quantity: 1,
           },
         });
-
-        if (existingItem) {
-          const newQuantity = existingItem.quantity + item.quantity;
-
-          if (newQuantity > 99) {
-            throw new CartServiceError(
-              "Cart item quantity cannot exceed 99.",
-              400,
-            );
-          }
-
-          await tx.cartItem.update({
-            where: {
-              id: existingItem.id,
-            },
-            data: {
-              quantity: newQuantity,
-            },
-          });
-        } else {
-          await tx.cartItem.create({
-            data: {
-              cartId: cart.id,
-              bookId: item.bookId,
-              quantity: item.quantity,
-            },
-          });
-        }
       }
 
       return tx.cart.findUniqueOrThrow({

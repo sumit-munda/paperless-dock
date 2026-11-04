@@ -69,7 +69,7 @@ const sampleCart = {
     {
       id: "item-123",
       bookId: "book-123",
-      quantity: 2,
+      quantity: 1,
       book: {
         id: "book-123",
         title: "Atomic Habits",
@@ -81,7 +81,7 @@ const sampleCart = {
       },
     },
   ],
-  itemCount: 2,
+  itemCount: 1,
 };
 
 async function createAuthenticatedAgent() {
@@ -141,11 +141,11 @@ describe("Cart routes", () => {
       items: [
         {
           bookId: "book-123",
-          quantity: 2,
+          quantity: 1,
         },
         {
           bookId: "book-456",
-          quantity: 3,
+          quantity: 1,
         },
       ],
     };
@@ -192,6 +192,23 @@ describe("Cart routes", () => {
       expect(mockMigrateGuestCart).not.toHaveBeenCalled();
     });
 
+    it("rejects migration quantities greater than 1", async () => {
+      const agent = await createAuthenticatedAgent();
+
+      const response = await agent.post("/api/cart/migrate").send({
+        ...migrationData,
+        items: [
+          {
+            bookId: "book-123",
+            quantity: 2,
+          },
+        ],
+      });
+
+      expect(response.status).toBe(400);
+      expect(mockMigrateGuestCart).not.toHaveBeenCalled();
+    });
+
     it("rejects duplicate book IDs", async () => {
       const agent = await createAuthenticatedAgent();
 
@@ -199,7 +216,7 @@ describe("Cart routes", () => {
         migrationId: migrationData.migrationId,
         items: [
           { bookId: "book-123", quantity: 1 },
-          { bookId: "book-123", quantity: 2 },
+          { bookId: "book-123", quantity: 1 },
         ],
       });
 
@@ -232,7 +249,7 @@ describe("Cart routes", () => {
 
       const response = await agent.post("/api/cart/items").send({
         bookId: "book-123",
-        quantity: 2,
+        quantity: 1,
       });
 
       expect(response.status).toBe(200);
@@ -240,8 +257,20 @@ describe("Cart routes", () => {
 
       expect(mockAddItemToCart).toHaveBeenCalledWith(customer.id, {
         bookId: "book-123",
+        quantity: 1,
+      });
+    });
+
+    it("rejects quantities greater than 1", async () => {
+      const agent = await createAuthenticatedAgent();
+
+      const response = await agent.post("/api/cart/items").send({
+        bookId: "book-123",
         quantity: 2,
       });
+
+      expect(response.status).toBe(400);
+      expect(mockAddItemToCart).not.toHaveBeenCalled();
     });
 
     it("rejects invalid cart item data", async () => {
@@ -273,21 +302,32 @@ describe("Cart routes", () => {
   });
 
   describe("PATCH /api/cart/items/:bookId", () => {
-    it("updates a cart item's quantity", async () => {
+    it("updates a cart item's quantity to 1", async () => {
       const agent = await createAuthenticatedAgent();
 
       mockUpdateCartItem.mockResolvedValue(sampleCart);
 
       const response = await agent
         .patch("/api/cart/items/book-123")
-        .send({ quantity: 3 });
+        .send({ quantity: 1 });
 
       expect(response.status).toBe(200);
       expect(response.body.cart).toEqual(sampleCart);
 
       expect(mockUpdateCartItem).toHaveBeenCalledWith(customer.id, "book-123", {
-        quantity: 3,
+        quantity: 1,
       });
+    });
+
+    it("rejects quantities greater than 1", async () => {
+      const agent = await createAuthenticatedAgent();
+
+      const response = await agent
+        .patch("/api/cart/items/book-123")
+        .send({ quantity: 2 });
+
+      expect(response.status).toBe(400);
+      expect(mockUpdateCartItem).not.toHaveBeenCalled();
     });
 
     it("rejects an invalid quantity", async () => {

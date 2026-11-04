@@ -1,25 +1,29 @@
 import z from "zod";
-import { TypeOf } from "zod/v3";
+
+const digitalBookQuantitySchema = z
+  .number()
+  .int("Quantity must be a whole number.")
+  .min(1, "Quantity must be at least 1.")
+  .max(99, "Quantity cannot exceed 99.")
+  .superRefine((quantity, ctx) => {
+    if (quantity !== 1) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Digital books can only have a quantity of 1.",
+      });
+    }
+  });
 
 export const addCartItemSchema = z
   .object({
     bookId: z.string().trim().min(1, "Book ID is required."),
-    quantity: z
-      .number()
-      .int("Quantity must be a whole number.")
-      .min(1, "Quantity must be at least 1.")
-      .max(99, "Quantity cannot exceed 99.")
-      .default(1),
+    quantity: digitalBookQuantitySchema.default(1),
   })
   .strict();
 
 export const updateCartItemSchema = z
   .object({
-    quantity: z
-      .number()
-      .int("Quantity must be a whole number.")
-      .min(1, "Quantity must be at least 1.")
-      .max(99, "Quanity cannot exceed 99."),
+    quantity: digitalBookQuantitySchema,
   })
   .strict();
 
@@ -34,7 +38,7 @@ export const migrateGuestCartSchema = z
         z
           .object({
             bookId: z.string().trim().min(1, "Book ID is required."),
-            quantity: z.number().int().min(1).max(99),
+            quantity: digitalBookQuantitySchema,
           })
           .strict(),
       )
@@ -54,4 +58,6 @@ export const migrateGuestCartSchema = z
     }
   });
 
-export type MigrateGuestCartInput = z.infer<typeof migrateGuestCartSchema>;
+export type MigrateGuestCartInput = z.infer<
+  typeof migrateGuestCartSchema
+>;
