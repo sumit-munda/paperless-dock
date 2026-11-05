@@ -1,12 +1,15 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import prisma from "../prisma.js";
 import {
   fulfillCapturedPayment,
+  recordFailedPayment,
   PaymentServiceError,
 } from "../services/payments.service.js";
 
 const router = Router();
+
+const PROCESSING_LEASE_MS = 10 * 60 * 1000;
 
 interface RazorpayWebhookPayment {
   id: string;
@@ -14,6 +17,8 @@ interface RazorpayWebhookPayment {
   amount: number;
   currency: string;
   status: string;
+  error_code?: string | null;
+  error_description?: string | null;
 }
 
 interface RazorpayWebhookPayload {
@@ -159,14 +164,22 @@ router.post("/", async (req: Request, res: Response) => {
     }
 
     // This event ID has already been received.
-    webhookEvent = await prisma.paymentWebhookEvent.findUnique({
-      where: {
-        provider_providerEventId: {
-          provider: "RAZORPAY",
-          providerEventId: eventId,
+    try {
+      webhookEvent = await prisma.paymentWebhookEvent.findUnique({
+        where: {
+          provider_providerEventId: {
+            provider: "RAZORPAY",
+            providerEventId: eventId,
+          },
         },
-      },
-    });
+      });
+    } catch (lookupError) {
+      console.error("Unable to retrieve existing webhook event:", lookupError);
+
+      return res.status(500).json({
+        message: "Unable to retrieve existing webhook event.",
+      });
+    }
 
     if (!webhookEvent) {
       return res.status(500).json({
@@ -175,20 +188,46 @@ router.post("/", async (req: Request, res: Response) => {
     }
   }
 
-  // Atomically claim the event so simultaneous deliveries cannot
-  // process the same event concurrently.
-  const claimed = await prisma.paymentWebhookEvent.updateMany({
-    where: {
-      id: webhookEvent.id,
-      status: {
-        in: ["RECEIVED", "FAILED"],
+  // Generate a unique token for this processing attempt.
+  const processingToken = randomUUID();
+
+  // Events stuck in PROCESSING for longer than this lease
+  // can be reclaimed by a subsequent delivery.
+  const staleProcessingTime = new Date(Date.now() - PROCESSING_LEASE_MS);
+
+  let claimed;
+
+  try {
+    claimed = await prisma.paymentWebhookEvent.updateMany({
+      where: {
+        id: webhookEvent.id,
+        OR: [
+          {
+            status: {
+              in: ["RECEIVED", "FAILED"],
+            },
+          },
+          {
+            status: "PROCESSING",
+            updatedAt: {
+              lt: staleProcessingTime,
+            },
+          },
+        ],
       },
-    },
-    data: {
-      status: "PROCESSING",
-      processingError: null,
-    },
-  });
+      data: {
+        status: "PROCESSING",
+        processingToken,
+        processingError: null,
+      },
+    });
+  } catch (error) {
+    console.error("Unable to claim webhook event:", error);
+
+    return res.status(500).json({
+      message: "Unable to claim webhook event.",
+    });
+  }
 
   if (claimed.count === 0) {
     return res.status(200).json({
@@ -210,21 +249,50 @@ router.post("/", async (req: Request, res: Response) => {
         amount: payment.amount,
         currency: payment.currency,
       });
+    } else if (event.event === "payment.failed") {
+      const payment = event.payload?.payment?.entity;
+
+      if (!isValidPayment(payment) || payment.status !== "failed") {
+        throw new PaymentServiceError("Invalid failed payment payload.", 400);
+      }
+
+      await recordFailedPayment({
+        razorpayOrderId: payment.order_id,
+        amount: payment.amount,
+        currency: payment.currency,
+        failureCode:
+          typeof payment.error_code === "string" ? payment.error_code : null,
+        failureDescription:
+          typeof payment.error_description === "string"
+            ? payment.error_description
+            : null,
+      });
     }
 
-    // Other event types, including payment.authorized and
-    // payment.failed, are recorded but never grant library access.
+    // Other event types are recorded without granting library access.
 
-    await prisma.paymentWebhookEvent.update({
+    // Only the worker holding the current token may mark
+    // this event as successfully processed.
+    const completed = await prisma.paymentWebhookEvent.updateMany({
       where: {
         id: webhookEvent.id,
+        status: "PROCESSING",
+        processingToken,
       },
       data: {
         status: "PROCESSED",
+        processingToken: null,
         processedAt: new Date(),
         processingError: null,
       },
     });
+
+    if (completed.count === 0) {
+      console.warn(
+        "Webhook processing lease was lost before completion:",
+        eventId,
+      );
+    }
 
     return res.status(200).json({
       message: "Webhook processed successfully.",
@@ -236,12 +304,16 @@ router.post("/", async (req: Request, res: Response) => {
         : "Unknown webhook processing error.";
 
     try {
-      await prisma.paymentWebhookEvent.update({
+      // An older worker must never overwrite a newer worker's result.
+      await prisma.paymentWebhookEvent.updateMany({
         where: {
           id: webhookEvent.id,
+          status: "PROCESSING",
+          processingToken,
         },
         data: {
           status: "FAILED",
+          processingToken: null,
           processingError: errorMessage,
         },
       });

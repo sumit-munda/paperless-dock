@@ -25,6 +25,14 @@ export interface CapturedPaymentInput {
   currency: string;
 }
 
+export interface FailedPaymentInput {
+  razorpayOrderId: string;
+  amount: number;
+  currency: string;
+  failureCode: string | null;
+  failureDescription: string | null;
+}
+
 function verifyCheckoutSignature(
   orderId: string,
   paymentId: string,
@@ -140,6 +148,99 @@ export async function createPaymentOrder(orderId: string, userId: string) {
 }
 
 /**
+ * Records a failed Razorpay payment attempt.
+ *
+ * A failed attempt does not fail the internal order.
+ * The customer can retry payment.
+ *
+ * This operation shares the Order row lock used by
+ * fulfillCapturedPayment to prevent a late failure event
+ * from overwriting a successful payment.
+ */
+export async function recordFailedPayment(input: FailedPaymentInput) {
+  const attempt = await prisma.paymentAttempt.findFirst({
+    where: {
+      provider: "RAZORPAY",
+      providerOrderId: input.razorpayOrderId,
+    },
+    select: {
+      id: true,
+      orderId: true,
+      amount: true,
+      currency: true,
+    },
+  });
+
+  if (!attempt) {
+    throw new PaymentServiceError("Payment attempt not found.", 404);
+  }
+
+  const expectedAmount = attempt.amount.mul(100).toNumber();
+
+  if (input.amount !== expectedAmount || input.currency !== attempt.currency) {
+    throw new PaymentServiceError(
+      "Payment details do not match the order.",
+      400,
+    );
+  }
+
+  return prisma.$transaction(async (tx) => {
+    // Use the same lock as successful payment fulfillment.
+    await tx.$queryRaw`
+      SELECT "id"
+      FROM "Order"
+      WHERE "id" = ${attempt.orderId}
+      FOR UPDATE
+    `;
+
+    const currentAttempt = await tx.paymentAttempt.findUnique({
+      where: { id: attempt.id },
+    });
+
+    const currentOrder = await tx.order.findUnique({
+      where: { id: attempt.orderId },
+    });
+
+    if (!currentAttempt || !currentOrder) {
+      throw new PaymentServiceError("Payment attempt not found.", 404);
+    }
+
+    // Never allow a late failure webhook to overwrite
+    // a successfully captured payment.
+    if (
+      currentAttempt.status === "CAPTURED" ||
+      currentOrder.status === "COMPLETED" ||
+      currentOrder.paymentStatus === "PAID"
+    ) {
+      return {
+        message: "Payment was already captured. Failure ignored.",
+        paymentStatus: currentOrder.paymentStatus,
+        attemptStatus: currentAttempt.status,
+      };
+    }
+
+    // Record the failed attempt without failing the internal order.
+    await tx.paymentAttempt.update({
+      where: {
+        id: currentAttempt.id,
+      },
+      data: {
+        status: "FAILED",
+        failureCode: input.failureCode,
+        failureDescription: input.failureDescription,
+        capturedAt: null,
+      },
+    });
+
+    return {
+      message: "Failed payment recorded.",
+      paymentStatus: currentOrder.paymentStatus,
+      attemptStatus: "FAILED" as const,
+    };
+  });
+}
+
+/**
  * The single fulfillment path used by both:
  * - The frontend checkout verification callback.
  * - The Razorpay payment.captured webhook.
@@ -178,7 +279,6 @@ export async function fulfillCapturedPayment(input: CapturedPaymentInput) {
   }
 
   return prisma.$transaction(async (tx) => {
-    // Serialize all fulfillment attempts for this internal order.
     await tx.$queryRaw`
       SELECT "id"
       FROM "Order"
@@ -205,7 +305,6 @@ export async function fulfillCapturedPayment(input: CapturedPaymentInput) {
       throw new PaymentServiceError("Order not found.", 404);
     }
 
-    // A repeated notification for the same captured payment is safe.
     if (
       currentAttempt.status === "CAPTURED" &&
       currentAttempt.providerPaymentId === input.razorpayPaymentId &&
@@ -220,7 +319,6 @@ export async function fulfillCapturedPayment(input: CapturedPaymentInput) {
       };
     }
 
-    // Never let a different payment attempt fulfill an already-paid order.
     if (
       currentOrder.status !== "PENDING" ||
       currentOrder.paymentStatus !== "PENDING"
@@ -238,7 +336,6 @@ export async function fulfillCapturedPayment(input: CapturedPaymentInput) {
       );
     }
 
-    // Prevent a payment ID from being associated with another attempt.
     if (
       currentAttempt.providerPaymentId &&
       currentAttempt.providerPaymentId !== input.razorpayPaymentId

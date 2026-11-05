@@ -236,6 +236,7 @@ model PaymentWebhookEvent {
   eventType       String
   payload         Json
   status          WebhookProcessingStatus @default(RECEIVED)
+  processingToken String?
   processingError String?                 @db.Text
   processedAt     DateTime?
   createdAt       DateTime                @default(now())
