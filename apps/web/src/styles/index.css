@@ -708,3 +708,358 @@ books-toolbar__field select:focus-visible {
   color: #067647;
   font-weight: 600;
 }
+
+/* =========================================
+   My Library Page
+========================================= */
+
+.library-page {
+  width: min(100%, 1200px);
+  margin-inline: auto;
+  padding-block: 1rem 3rem;
+}
+
+.library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+  padding: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background: var(--color-background);
+}
+
+.library-eyebrow {
+  margin: 0 0 0.5rem;
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.library-header h1 {
+  margin: 0;
+  color: var(--color-heading);
+  font-size: clamp(2rem, 4vw, 2.75rem);
+}
+
+.library-description {
+  margin: 0.75rem 0 0;
+  color: var(--color-text);
+}
+
+.library-count {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 100px;
+  height: 100px;
+  border-radius: 1rem;
+  background: var(--color-primary);
+  color: white;
+}
+
+.library-count span:first-child {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.library-count span:last-child {
+  font-size: 0.875rem;
+}
+
+/* Library Grid */
+
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.library-card {
+  display: grid;
+  grid-template-columns: 145px minmax(0, 1fr);
+  gap: 1.25rem;
+  padding: 1.25rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background: var(--color-surface);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.library-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 7%);
+}
+
+.library-card-cover {
+  min-height: 210px;
+  overflow: hidden;
+  border-radius: 0.65rem;
+  background: var(--color-background);
+}
+
+.library-card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.library-cover-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 100%;
+  min-height: 210px;
+  padding: 1rem;
+  color: var(--color-text);
+  text-align: center;
+}
+
+.library-cover-placeholder span:first-child {
+  font-size: 2.5rem;
+}
+
+.library-cover-placeholder span:last-child {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Card Content */
+
+.library-card-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.library-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.library-owned-badge {
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: #ecfdf3;
+  color: #067647;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.library-purchased-date {
+  color: var(--color-text);
+  font-size: 0.75rem;
+}
+
+.library-card-content h2 {
+  margin: 0;
+  color: var(--color-heading);
+  font-size: 1.15rem;
+  line-height: 1.4;
+}
+
+.library-authors {
+  margin: 0.4rem 0 0;
+  color: var(--color-text);
+  font-size: 0.875rem;
+}
+
+.library-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.library-categories span {
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text);
+  font-size: 0.7rem;
+}
+
+/* Reading Progress */
+
+.library-progress {
+  margin-top: auto;
+  padding-top: 1.25rem;
+}
+
+.library-progress-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.library-progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.library-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primary);
+  transition: width 0.3s ease;
+}
+
+.library-last-read {
+  margin: 0.5rem 0 0;
+  color: var(--color-text);
+  font-size: 0.75rem;
+}
+
+/* Card Footer */
+
+.library-card-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 0.75rem;
+}
+
+/* Empty, Loading and Error States */
+
+.library-empty,
+.library-loading,
+.library-error {
+  padding: 4rem 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.library-empty-icon {
+  margin-bottom: 1rem;
+  font-size: 3rem;
+}
+
+.library-empty h2,
+.library-error h2 {
+  margin: 0;
+  color: var(--color-heading);
+}
+
+.library-empty p,
+.library-error p,
+.library-loading p {
+  max-width: 480px;
+  margin: 0.75rem auto 1.5rem;
+  color: var(--color-text);
+  line-height: 1.7;
+}
+
+.library-browse-button,
+.library-error button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--color-primary);
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.library-browse-button:hover,
+.library-error button:hover {
+  opacity: 0.85;
+}
+
+.library-error button:focus-visible,
+.library-browse-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* Responsive Layout */
+
+@media (max-width: 900px) {
+  .library-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .library-header {
+    align-items: flex-start;
+    padding: 1.25rem;
+  }
+
+  .library-count {
+    width: 75px;
+    height: 75px;
+  }
+
+  .library-count span:first-child {
+    font-size: 1.5rem;
+  }
+
+  .library-count span:last-child {
+    font-size: 0.75rem;
+  }
+
+  .library-card {
+    grid-template-columns: 105px minmax(0, 1fr);
+    gap: 0.85rem;
+    padding: 0.85rem;
+  }
+
+  .library-card-cover,
+  .library-cover-placeholder {
+    min-height: 165px;
+  }
+
+  .library-card-content h2 {
+    font-size: 1rem;
+  }
+
+  .library-card-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 380px) {
+  .library-header {
+    flex-direction: column;
+  }
+
+  .library-card {
+    grid-template-columns: 1fr;
+  }
+
+  .library-card-cover,
+  .library-cover-placeholder {
+    min-height: 220px;
+  }
+}

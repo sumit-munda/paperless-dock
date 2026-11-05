@@ -41,6 +41,8 @@ const MainLayout = () => {
 
           {user ? (
             <>
+              <Link to="/library">My Library </Link>
+
               <span className="user-greeting">Hi, {user.name}</span>
 
               <Link to="/profile">Profile</Link>

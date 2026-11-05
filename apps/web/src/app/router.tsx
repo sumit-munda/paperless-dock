@@ -9,6 +9,7 @@ import LoginPage from "../pages/LoginPage";
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import ProfilePage from "../pages/ProfilePage";
 import OrderConfirmationPage from "../pages/OrderConfirmationPage";
+import MyLibraryPage from "../pages/MyLibraryPage";
 
 export const router = createBrowserRouter([
   {
@@ -37,6 +38,10 @@ export const router = createBrowserRouter([
           {
             path: "profile",
             element: <ProfilePage />,
+          },
+          {
+            path: "library",
+            element: <MyLibraryPage />,
           },
           {
             path: "orders/:orderId",
