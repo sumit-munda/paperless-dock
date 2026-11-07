@@ -14,6 +14,7 @@ export interface LibraryBook {
   coverImage: string;
   language: string;
   pageCount: number | null;
+  hasContent: boolean;
   authors: string[];
   categories: string[];
 }
@@ -38,4 +39,8 @@ interface LibraryResponse {
 
 export async function getUserLibrary(): Promise<LibraryResponse> {
   return apiRequest<LibraryResponse>(`${API_BASE_URL}/api/library`);
+}
+
+export function getBookPdfUrl(bookId: string): string {
+  return `${API_BASE_URL}/api/library/${encodeURIComponent(bookId)}/content`;
 }

@@ -18,6 +18,7 @@ export async function getUserLibrary(userId: string) {
           coverImage: true,
           language: true,
           pageCount: true,
+          contentReference: true,
 
           authors: {
             select: {
@@ -79,6 +80,7 @@ export async function getUserLibrary(userId: string) {
         coverImage: item.book.coverImage ?? "",
         language: item.book.language,
         pageCount: item.book.pageCount,
+        hasContent: Boolean(item.book.contentReference),
 
         authors: item.book.authors.map((item) => item.author.name),
 

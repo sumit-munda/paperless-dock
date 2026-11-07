@@ -1,20 +1,31 @@
+/* eslint-disable react-refresh/only-export-components */
+
+import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
+
 import MainLayout from "../components/layout/MainLayout";
+
 import HomePage from "../pages/HomePage";
 import BooksPage from "../pages/BooksPage";
 import BookDetailsPage from "../pages/BookDetailsPage";
 import CartPage from "../pages/CartPage";
 import RegisterPage from "../pages/RegisterPage";
 import LoginPage from "../pages/LoginPage";
-import ProtectedRoute from "../components/auth/ProtectedRoute";
 import ProfilePage from "../pages/ProfilePage";
 import OrderConfirmationPage from "../pages/OrderConfirmationPage";
 import MyLibraryPage from "../pages/MyLibraryPage";
+
+import ProtectedRoute from "../components/auth/ProtectedRoute";
+import RouteErrorPage from "../pages/RouterErrorPage";
+
+// Load PDF.js and the reader page only when the reader route is visited.
+const BookReaderPage = lazy(() => import("../pages/BookReaderPage"));
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <MainLayout />,
+    errorElement: <RouteErrorPage/>,
     children: [
       {
         path: "/",
@@ -42,6 +53,20 @@ export const router = createBrowserRouter([
           {
             path: "library",
             element: <MyLibraryPage />,
+          },
+          {
+            path: "library/:bookId/read",
+            element: (
+              <Suspense
+                fallback={
+                  <div className="reader-loading">
+                    <p>Loading reader...</p>
+                  </div>
+                }
+              >
+                <BookReaderPage />
+              </Suspense>
+            ),
           },
           {
             path: "orders/:orderId",

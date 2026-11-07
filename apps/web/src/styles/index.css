@@ -930,6 +930,56 @@ books-toolbar__field select:focus-visible {
   font-size: 0.75rem;
 }
 
+/* Library Reading Actions */
+
+.library-reading-action {
+  display: flex;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.library-read-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 0.5rem;
+  background: var(--color-primary);
+  color: white;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.library-read-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+}
+
+.library-read-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.library-content-unavailable {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.5rem;
+  color: var(--color-text);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
 /* Card Footer */
 
 .library-card-footer {
@@ -1061,5 +1111,243 @@ books-toolbar__field select:focus-visible {
   .library-card-cover,
   .library-cover-placeholder {
     min-height: 220px;
+  }
+}
+
+/* =========================================
+   PDF Book Reader
+========================================= */
+
+.reader-page {
+  width: min(100%, 1200px);
+  min-height: 75vh;
+  margin-inline: auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+/* Reader Header */
+
+.reader-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+  background: var(--color-surface);
+}
+
+.reader-header h1 {
+  margin: 0.5rem 0 0;
+  color: var(--color-heading);
+  font-size: 1.5rem;
+}
+
+.reader-back-link {
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.reader-back-link:hover {
+  text-decoration: underline;
+}
+
+/* Zoom Controls */
+
+.reader-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  color: var(--color-heading);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.reader-controls button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-background);
+  color: var(--color-heading);
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.reader-controls button:hover:not(:disabled) {
+  background: var(--color-border);
+}
+
+.reader-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.reader-controls button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* PDF Document Area */
+
+.reader-document {
+  display: flex;
+  justify-content: center;
+  min-height: 500px;
+  padding: 2rem 1rem;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+  background: var(--color-background);
+}
+
+.reader-document .react-pdf__Document {
+  max-width: 100%;
+}
+
+.reader-document .react-pdf__Page {
+  max-width: 100%;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 4px 20px rgb(0 0 0 / 10%);
+}
+
+.reader-document .react-pdf__Page canvas {
+  display: block;
+  max-width: 100%;
+  height: auto !important;
+}
+
+.reader-document .react-pdf__Page__textContent {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Page Navigation */
+
+.reader-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+}
+
+.reader-pagination span {
+  color: var(--color-heading);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.reader-pagination button {
+  padding: 0.65rem 1.25rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 0.5rem;
+  background: var(--color-primary);
+  color: white;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.reader-pagination button:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.reader-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.reader-pagination button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* Loading and Error States */
+
+.reader-loading,
+.reader-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  padding: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.85rem;
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.reader-loading p,
+.reader-error p {
+  color: var(--color-text);
+  line-height: 1.7;
+}
+
+.reader-error h2 {
+  margin: 0;
+  color: var(--color-heading);
+}
+
+.reader-error a {
+  margin-top: 0.75rem;
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.reader-error a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive Reader */
+
+@media (max-width: 600px) {
+  .reader-page {
+    padding-inline: 0.5rem;
+  }
+
+  .reader-header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  .reader-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .reader-document {
+    min-height: 350px;
+    padding: 1rem 0.5rem;
+  }
+
+  .reader-pagination {
+    gap: 0.75rem;
+    padding: 0.85rem 0.5rem;
+  }
+
+  .reader-pagination button {
+    padding: 0.6rem 0.85rem;
+  }
+
+  .reader-pagination span {
+    font-size: 0.75rem;
   }
 }

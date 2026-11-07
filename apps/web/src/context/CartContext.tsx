@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -16,10 +17,7 @@ import {
   removeCartItem as removeCartItemRequest,
 } from "../api/cartApi";
 
-import {
-  createCheckoutOrder,
-  type CheckoutOrder,
-} from "../api/checkoutApi";
+import { createCheckoutOrder, type CheckoutOrder } from "../api/checkoutApi";
 
 export interface CartItem {
   bookId: string;
@@ -47,6 +45,65 @@ type CartMode = "loading" | "guest" | "account";
 interface PendingCartMigration {
   migrationId: string;
   items: CartItem[];
+}
+
+function getMigrationKey(userId: string) {
+  return `paperless-dock-cart-migration-${userId}`;
+}
+
+function getPendingMigration(
+  userId: string,
+  guestItems: CartItem[],
+): PendingCartMigration {
+  const key = getMigrationKey(userId);
+
+  try {
+    const savedMigration = window.localStorage.getItem(key);
+
+    if (savedMigration) {
+      const parsed: unknown = JSON.parse(savedMigration);
+
+      if (
+        typeof parsed === "object" &&
+        parsed !== null &&
+        "migrationId" in parsed &&
+        typeof parsed.migrationId === "string" &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          parsed.migrationId,
+        ) &&
+        "items" in parsed &&
+        Array.isArray(parsed.items) &&
+        parsed.items.length > 0 &&
+        parsed.items.length <= 100
+      ) {
+        const normalizedItems = normalizeCartItems(parsed.items);
+
+        if (normalizedItems.length > 0) {
+          const migration: PendingCartMigration = {
+            migrationId: parsed.migrationId,
+            items: normalizedItems,
+          };
+
+          window.localStorage.setItem(key, JSON.stringify(migration));
+
+          return migration;
+        }
+      }
+    }
+
+    const migration: PendingCartMigration = {
+      migrationId: crypto.randomUUID(),
+      items: guestItems,
+    };
+
+    window.localStorage.setItem(key, JSON.stringify(migration));
+
+    return migration;
+  } catch {
+    throw new Error(
+      "Unable to prepare cart migration. Please check your browser storage settings.",
+    );
+  }
 }
 
 function normalizeCartItems(items: unknown): CartItem[] {
@@ -102,10 +159,7 @@ function loadCartItems(): CartItem[] {
 
 function saveCartItems(items: CartItem[]) {
   try {
-    window.localStorage.setItem(
-      CART_STORAGE_KEY,
-      JSON.stringify(items),
-    );
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   } catch {
     // Ignore storage errors.
   }
@@ -135,91 +189,34 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const operationQueueRef = useRef<Promise<void>>(Promise.resolve());
 
-  userIdRef.current = user?.id ?? null;
-
   const retryingMigrationRef = useRef(false);
+
+  useEffect(() => {
+    userIdRef.current = user?.id ?? null;
+  }, [user?.id]);
 
   function updateItems(nextItems: CartItem[]) {
     itemsRef.current = nextItems;
     setItems(nextItems);
   }
 
-  function getMigrationKey(userId: string) {
-    return `paperless-dock-cart-migration-${userId}`;
-  }
+  const migrateGuestCart = useCallback(
+    async (userId: string): Promise<void> => {
+      const guestItems = loadCartItems();
 
-  function getPendingMigration(
-    userId: string,
-    guestItems: CartItem[],
-  ): PendingCartMigration {
-    const key = getMigrationKey(userId);
-
-    try {
-      const savedMigration = window.localStorage.getItem(key);
-
-      if (savedMigration) {
-        const parsed: unknown = JSON.parse(savedMigration);
-
-        if (
-          typeof parsed === "object" &&
-          parsed !== null &&
-          "migrationId" in parsed &&
-          typeof parsed.migrationId === "string" &&
-          /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-            parsed.migrationId,
-          ) &&
-          "items" in parsed &&
-          Array.isArray(parsed.items) &&
-          parsed.items.length > 0 &&
-          parsed.items.length <= 100
-        ) {
-          const normalizedItems = normalizeCartItems(parsed.items);
-
-          if (normalizedItems.length > 0) {
-            const migration: PendingCartMigration = {
-              migrationId: parsed.migrationId,
-              items: normalizedItems,
-            };
-
-            window.localStorage.setItem(
-              key,
-              JSON.stringify(migration),
-            );
-
-            return migration;
-          }
-        }
+      if (guestItems.length === 0) {
+        return;
       }
 
-      const migration: PendingCartMigration = {
-        migrationId: crypto.randomUUID(),
-        items: guestItems,
-      };
+      const migration = getPendingMigration(userId, guestItems);
 
-      window.localStorage.setItem(key, JSON.stringify(migration));
+      await migrateGuestCartRequest(migration);
 
-      return migration;
-    } catch {
-      throw new Error(
-        "Unable to prepare cart migration. Please check your browser storage settings.",
-      );
-    }
-  }
-
-  async function migrateGuestCart(userId: string): Promise<void> {
-    const guestItems = loadCartItems();
-
-    if (guestItems.length === 0) {
-      return;
-    }
-
-    const migration = getPendingMigration(userId, guestItems);
-
-    await migrateGuestCartRequest(migration);
-
-    window.localStorage.removeItem(CART_STORAGE_KEY);
-    window.localStorage.removeItem(getMigrationKey(userId));
-  }
+      window.localStorage.removeItem(CART_STORAGE_KEY);
+      window.localStorage.removeItem(getMigrationKey(userId));
+    },
+    [],
+  );
 
   async function retryMigration(): Promise<void> {
     const currentUserId = userIdRef.current;
@@ -346,7 +343,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, authLoading]);
+  }, [user, authLoading, migrateGuestCart]);
 
   useEffect(() => {
     if (mode === "guest") {
@@ -400,9 +397,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     const normalizedBookId = bookId.trim();
 
     if (mode === "account") {
-      await runAccountOperation(() =>
-        addCartItemRequest(normalizedBookId),
-      );
+      await runAccountOperation(() => addCartItemRequest(normalizedBookId));
 
       return;
     }
@@ -470,9 +465,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       const order = await createCheckoutOrder();
 
       if (userIdRef.current !== userId) {
-        throw new Error(
-          "Your account changed while checkout was processing.",
-        );
+        throw new Error("Your account changed while checkout was processing.");
       }
 
       updateItems([]);

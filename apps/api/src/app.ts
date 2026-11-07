@@ -18,6 +18,7 @@ app.use(
   cors({
     origin: "http://localhost:5173",
     credentials: true,
+    exposedHeaders: ["Accept-Ranges", "Content-Range", "Content-Length"],
   }),
 );
 

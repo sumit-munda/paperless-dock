@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  getUserLibrary,
-  type LibraryItem,
-} from "../api/libraryApi";
+import { getUserLibrary, type LibraryItem } from "../api/libraryApi";
 
 export default function MyLibraryPage() {
   const [library, setLibrary] = useState<LibraryItem[]>([]);
@@ -73,10 +70,7 @@ export default function MyLibraryPage() {
         <div className="library-error">
           <h2>Unable to load your library</h2>
           <p>{error}</p>
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-          >
+          <button type="button" onClick={() => window.location.reload()}>
             Try again
           </button>
         </div>
@@ -106,8 +100,8 @@ export default function MyLibraryPage() {
           <div className="library-empty-icon">📚</div>
           <h2>Your library is waiting</h2>
           <p>
-            Books you purchase will appear here. Discover something
-            worth reading today.
+            Books you purchase will appear here. Discover something worth
+            reading today.
           </p>
           <Link to="/books" className="library-browse-button">
             Explore Books
@@ -116,9 +110,7 @@ export default function MyLibraryPage() {
       ) : (
         <section className="library-grid">
           {library.map((item) => {
-            const progress = getProgress(
-              item.readingProgress.percentage,
-            );
+            const progress = getProgress(item.readingProgress.percentage);
 
             return (
               <article className="library-card" key={item.id}>
@@ -138,9 +130,7 @@ export default function MyLibraryPage() {
 
                 <div className="library-card-content">
                   <div className="library-card-top">
-                    <span className="library-owned-badge">
-                      Purchased
-                    </span>
+                    <span className="library-owned-badge">Purchased</span>
                     <span className="library-purchased-date">
                       {formatDate(item.purchasedAt)}
                     </span>
@@ -184,8 +174,7 @@ export default function MyLibraryPage() {
 
                     {item.readingProgress.lastReadAt && (
                       <p className="library-last-read">
-                        Last read:{" "}
-                        {formatDate(item.readingProgress.lastReadAt)}
+                        Last read: {formatDate(item.readingProgress.lastReadAt)}
                       </p>
                     )}
                   </div>
@@ -196,9 +185,22 @@ export default function MyLibraryPage() {
                         ? `${item.book.pageCount} pages`
                         : "Digital book"}
                     </span>
-                    <span>
-                      {item.book.language.toUpperCase()}
-                    </span>
+                    <span>{item.book.language.toUpperCase()}</span>
+                  </div>
+
+                  <div className="library-reading-action">
+                    {item.book.hasContent ? (
+                      <Link
+                        to={`/library/${item.book.id}/read`}
+                        className="library-read-button"
+                      >
+                        Read Book →
+                      </Link>
+                    ) : (
+                      <span className="library-content-unavailable">
+                        Reading content coming soon
+                      </span>
+                    )}
                   </div>
                 </div>
               </article>

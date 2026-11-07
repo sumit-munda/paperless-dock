@@ -4,19 +4,9 @@ import { Readable } from "node:stream";
 import { S3ServiceException } from "@aws-sdk/client-s3";
 import bcrypt from "bcryptjs";
 import request from "supertest";
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-const {
-  getStoredPdfMock,
-  getStoredPdfSizeMock,
-} = vi.hoisted(() => ({
+const { getStoredPdfMock, getStoredPdfSizeMock } = vi.hoisted(() => ({
   getStoredPdfMock: vi.fn(),
   getStoredPdfSizeMock: vi.fn(),
 }));
@@ -236,6 +226,7 @@ describe("Library API integration tests", () => {
         description: "Temporary book for library API tests.",
         language: "en",
         pageCount: null,
+        hasContent: false,
         authors: [],
         categories: [],
       },
@@ -245,6 +236,29 @@ describe("Library API integration tests", () => {
         lastReadAt: null,
       },
     });
+  });
+
+  it("indicates PDF availability without exposing the storage key", async () => {
+    await clearTestData();
+
+    await createLibraryItem(userId);
+    await attachPdfToBook();
+
+    const agent = await login(email);
+
+    const response = await agent.get("/api/library");
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.library[0].book.hasContent).toBe(true);
+
+    expect(response.body.library[0].book).not.toHaveProperty(
+      "contentReference",
+    );
+
+    expect(JSON.stringify(response.body)).not.toContain(
+      `books/${bookId}/test-file.pdf`,
+    );
   });
 
   it("includes reading progress for a purchased book", async () => {
