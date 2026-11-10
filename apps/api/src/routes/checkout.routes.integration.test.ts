@@ -79,14 +79,23 @@ describe("Checkout API integration tests", () => {
   async function login() {
     const agent = request.agent(app);
 
-    const response = await agent.post("/api/auth/login").send({
-      email,
-      password,
-    });
+    const initialCsrfResponse = await agent.get("/api/auth/csrf-token");
+    expect(initialCsrfResponse.status).toBe(200);
 
-    expect(response.status).toBe(200);
+    const loginResponse = await agent
+      .post("/api/auth/login")
+      .set("X-CSRF-Token", initialCsrfResponse.body.csrfToken)
+      .send({ email, password });
 
-    return agent;
+    expect(loginResponse.status).toBe(200);
+
+    const csrfResponse = await agent.get("/api/auth/csrf-token");
+    expect(csrfResponse.status).toBe(200);
+
+    return {
+      agent,
+      csrfToken: csrfResponse.body.csrfToken as string,
+    };
   }
 
   async function addBookToCart(bookId: string) {
@@ -105,8 +114,33 @@ describe("Checkout API integration tests", () => {
     });
   }
 
-  it("rejects checkout when the user is not authenticated", async () => {
+  it("rejects checkout when an unauthenticated request has no CSRF token", async () => {
     const response = await request(app).post("/api/checkout").send();
+
+    expect(response.status).toBe(403);
+
+    expect(response.body).toEqual({
+      message: "Invalid or missing CSRF token.",
+    });
+
+    const orders = await prisma.order.count({
+      where: { userId },
+    });
+
+    expect(orders).toBe(0);
+  });
+
+  it("rejects checkout when an unauthenticated request has a valid CSRF token", async () => {
+    const agent = request.agent(app);
+
+    const csrfResponse = await agent.get("/api/auth/csrf-token");
+
+    expect(csrfResponse.status).toBe(200);
+
+    const response = await agent
+      .post("/api/checkout")
+      .set("X-CSRF-Token", csrfResponse.body.csrfToken)
+      .send();
 
     expect(response.status).toBe(401);
 
@@ -132,9 +166,12 @@ describe("Checkout API integration tests", () => {
 
     await addBookToCart(bookId);
 
-    const agent = await login();
+    const { agent, csrfToken } = await login();
 
-    const response = await agent.post("/api/checkout").send();
+    const response = await agent
+      .post("/api/checkout")
+      .set("X-CSRF-Token", csrfToken)
+      .send();
 
     expect(response.status).toBe(201);
 
@@ -206,9 +243,12 @@ describe("Checkout API integration tests", () => {
   it("returns 400 when the authenticated user's cart is empty", async () => {
     await clearTestData();
 
-    const agent = await login();
+    const { agent, csrfToken } = await login();
 
-    const response = await agent.post("/api/checkout").send();
+    const response = await agent
+      .post("/api/checkout")
+      .set("X-CSRF-Token", csrfToken)
+      .send();
 
     expect(response.status).toBe(400);
 
@@ -241,9 +281,12 @@ describe("Checkout API integration tests", () => {
 
     await addBookToCart(bookId);
 
-    const agent = await login();
+    const { agent, csrfToken } = await login();
 
-    const response = await agent.post("/api/checkout").send();
+    const response = await agent
+      .post("/api/checkout")
+      .set("X-CSRF-Token", csrfToken)
+      .send();
 
     expect(response.status).toBe(409);
 
@@ -278,9 +321,12 @@ describe("Checkout API integration tests", () => {
 
     await addBookToCart(bookId);
 
-    const agent = await login();
+    const { agent, csrfToken } = await login();
 
-    const response = await agent.post("/api/checkout").send();
+    const response = await agent
+      .post("/api/checkout")
+      .set("X-CSRF-Token", csrfToken)
+      .send();
 
     expect(response.status).toBe(409);
 

@@ -51,10 +51,21 @@ describe("GET /api/auth/protected", () => {
 
     const agent = request.agent(app);
 
-    const loginResponse = await agent.post("/api/auth/login").send({
-      email: "jane@example.com",
-      password: "Password123!",
-    });
+    // Obtain a CSRF token and establish the session cookie.
+    const csrfResponse = await agent.get("/api/auth/csrf-token");
+
+    expect(csrfResponse.status).toBe(200);
+
+    const csrfToken = csrfResponse.body.csrfToken;
+
+    // Login with the CSRF token.
+    const loginResponse = await agent
+      .post("/api/auth/login")
+      .set("X-CSRF-Token", csrfToken)
+      .send({
+        email: "jane@example.com",
+        password: "Password123!",
+      });
 
     expect(loginResponse.status).toBe(200);
 

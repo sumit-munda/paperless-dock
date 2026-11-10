@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { apiRequest } from "./apiRequest";
+import { apiRequest, clearCsrfToken } from "./apiRequest";
 
 describe("apiRequest", () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
     fetchMock.mockReset();
+    clearCsrfToken();
     vi.stubGlobal("fetch", fetchMock);
   });
 
@@ -38,30 +39,61 @@ describe("apiRequest", () => {
 
     await apiRequest<{ books: unknown[] }>("/api/books");
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/books", {
-      credentials: "include",
-      method: "GET",
-    });
-  });
-
-  it("passes custom request options to fetch", async () => {
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ success: true }), {
-        status: 209,
-        headers: { "Content-Type": "application/json" },
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/books",
+      expect.objectContaining({
+        credentials: "include",
       }),
     );
 
+    const requestOptions = fetchMock.mock.calls[0][1];
+
+    expect(requestOptions.method).toBeUndefined();
+    expect(requestOptions.headers).toBeInstanceOf(Headers);
+  });
+
+  it("passes custom request options to fetch", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ csrfToken: "test-csrf-token" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ success: true }), {
+          status: 209,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
     const options: RequestInit = {
-      credentials: "include",
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "Atomic Habits" }),
     };
 
-    await apiRequest<{ success: boolean }>("/api/books", options);
+    const result = await apiRequest<{ success: boolean }>(
+      "/api/books",
+      options,
+    );
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/books", options);
+    expect(result).toEqual({ success: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const actualRequestOptions = fetchMock.mock.calls[1][1];
+
+    expect(actualRequestOptions.credentials).toBe("include");
+    expect(actualRequestOptions.method).toBe("POST");
+    expect(actualRequestOptions.body).toBe(options.body);
+    expect(actualRequestOptions.headers).toBeInstanceOf(Headers);
+    expect(actualRequestOptions.headers.get("Content-Type")).toBe(
+      "application/json",
+    );
+    expect(actualRequestOptions.headers.get("X-CSRF-Token")).toBe(
+      "test-csrf-token",
+    );
   });
 
   it.each([404, 500])(

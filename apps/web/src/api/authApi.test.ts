@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { apiRequest } from "./apiRequest";
+import { apiRequest, clearCsrfToken } from "./apiRequest";
 import {
   fetchCurrentUser,
   login,
@@ -10,9 +10,11 @@ import {
 
 vi.mock("./apiRequest", () => ({
   apiRequest: vi.fn(),
+  clearCsrfToken: vi.fn(),
 }));
 
 const mockApiRequest = vi.mocked(apiRequest);
+const mockClearCsrfToken = vi.mocked(clearCsrfToken);
 
 const testUser: AuthUser = {
   id: "user-123",
@@ -86,6 +88,8 @@ describe("authApi", () => {
     );
 
     expect(result.user).toEqual(testUser);
+
+    expect(mockClearCsrfToken).toHaveBeenCalledOnce();
   });
 
   it("logs out using a POST request", async () => {
@@ -122,9 +126,7 @@ describe("authApi", () => {
   });
 
   it("propagates registration API errors", async () => {
-    mockApiRequest.mockRejectedValue(
-      new Error("API request failed: HTTP 409"),
-    );
+    mockApiRequest.mockRejectedValue(new Error("API request failed: HTTP 409"));
 
     await expect(
       register({
@@ -136,9 +138,7 @@ describe("authApi", () => {
   });
 
   it("propagates login API errors", async () => {
-    mockApiRequest.mockRejectedValue(
-      new Error("API request failed: HTTP 401"),
-    );
+    mockApiRequest.mockRejectedValue(new Error("API request failed: HTTP 401"));
 
     await expect(
       login({
@@ -149,9 +149,7 @@ describe("authApi", () => {
   });
 
   it("propagates current-user API errors", async () => {
-    mockApiRequest.mockRejectedValue(
-      new Error("API request failed: HTTP 401"),
-    );
+    mockApiRequest.mockRejectedValue(new Error("API request failed: HTTP 401"));
 
     await expect(fetchCurrentUser()).rejects.toThrow(
       "API request failed: HTTP 401",

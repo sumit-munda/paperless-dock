@@ -1,4 +1,4 @@
-import { apiRequest } from "./apiRequest";
+import { apiRequest, clearCsrfToken } from "./apiRequest";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -51,19 +51,30 @@ export async function register(input: RegisterInput): Promise<AuthResponse> {
 }
 
 export async function login(input: LoginInput): Promise<AuthResponse> {
-  return apiRequest<AuthResponse>(`${AUTH_API_URL}/login`, {
+  const response = await apiRequest<AuthResponse>(`${AUTH_API_URL}/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(input),
   });
+
+  clearCsrfToken();
+
+  return response;
 }
 
 export async function logout(): Promise<{ message: string }> {
-  return apiRequest<{ message: string }>(`${AUTH_API_URL}/logout`, {
-    method: "POST",
-  });
+  const response = await apiRequest<{ message: string }>(
+    `${AUTH_API_URL}/logout`,
+    {
+      method: "POST",
+    },
+  );
+
+  clearCsrfToken();
+
+  return response;
 }
 
 export async function fetchCurrentUser(): Promise<AuthUser> {

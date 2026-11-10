@@ -1,6 +1,20 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../context/useAuth";
 
+const getSafeAvatarUrl = (value: string): string => {
+  try {
+    const url = new URL(value);
+
+    if (url.protocol === "https:" || url.protocol === "http:") {
+      return url.href;
+    }
+
+    return "";
+  } catch {
+    return "";
+  }
+};
+
 const ProfilePage = () => {
   const { user, updateProfile } = useAuth();
 
@@ -54,7 +68,7 @@ const ProfilePage = () => {
 
         <div className="profile-avatar">
           {avatar.trim() ? (
-            <img src={avatar} alt={`${user.name}'s profile`} />
+            <img src={getSafeAvatarUrl(avatar)} alt={`${user.name}'s profile`} />
           ) : (
             <span aria-label="No profile image">
               {user.name.charAt(0).toUpperCase()}

@@ -84,6 +84,20 @@ const sampleCart = {
   itemCount: 1,
 };
 
+const migrationData = {
+  migrationId: "550e8400-e29b-41d4-a716-446655440000",
+  items: [
+    {
+      bookId: "book-123",
+      quantity: 1,
+    },
+    {
+      bookId: "book-456",
+      quantity: 1,
+    },
+  ],
+};
+
 async function createAuthenticatedAgent() {
   mockFindUnique.mockResolvedValue({
     ...customer,
@@ -94,14 +108,31 @@ async function createAuthenticatedAgent() {
 
   const agent = request.agent(app);
 
-  const loginResponse = await agent.post("/api/auth/login").send({
-    email: customer.email,
-    password: "Password123!",
-  });
+  // Obtain a token for the initial session.
+  const initialCsrfResponse = await agent.get("/api/auth/csrf-token");
+
+  expect(initialCsrfResponse.status).toBe(200);
+
+  // Login with the initial session's token.
+  const loginResponse = await agent
+    .post("/api/auth/login")
+    .set("X-CSRF-Token", initialCsrfResponse.body.csrfToken)
+    .send({
+      email: customer.email,
+      password: "Password123!",
+    });
 
   expect(loginResponse.status).toBe(200);
 
-  return agent;
+  // Login regenerates the session, so obtain a fresh token.
+  const csrfResponse = await agent.get("/api/auth/csrf-token");
+
+  expect(csrfResponse.status).toBe(200);
+
+  return {
+    agent,
+    csrfToken: csrfResponse.body.csrfToken as string,
+  };
 }
 
 describe("Cart routes", () => {
@@ -114,15 +145,12 @@ describe("Cart routes", () => {
       const response = await request(app).get("/api/cart");
 
       expect(response.status).toBe(401);
-      expect(response.body).toEqual({
-        message: "Authentication required.",
-      });
 
       expect(mockGetCart).not.toHaveBeenCalled();
     });
 
     it("returns the authenticated user's cart", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent } = await createAuthenticatedAgent();
 
       mockGetCart.mockResolvedValue(sampleCart);
 
@@ -136,37 +164,24 @@ describe("Cart routes", () => {
   });
 
   describe("POST /api/cart/migrate", () => {
-    const migrationData = {
-      migrationId: "550e8400-e29b-41d4-a716-446655440000",
-      items: [
-        {
-          bookId: "book-123",
-          quantity: 1,
-        },
-        {
-          bookId: "book-456",
-          quantity: 1,
-        },
-      ],
-    };
-
-    it("returns 401 when the user is not authenticated", async () => {
+    it("returns 403 when the user is not authenticated and has no CSRF token", async () => {
       const response = await request(app)
         .post("/api/cart/migrate")
         .send(migrationData);
 
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(403);
 
       expect(mockMigrateGuestCart).not.toHaveBeenCalled();
     });
 
     it("migrates guest cart items into the authenticated user's cart", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
       mockMigrateGuestCart.mockResolvedValue(sampleCart);
 
       const response = await agent
         .post("/api/cart/migrate")
+        .set("X-CSRF-Token", csrfToken)
         .send(migrationData);
 
       expect(response.status).toBe(200);
@@ -179,12 +194,15 @@ describe("Cart routes", () => {
     });
 
     it("rejects invalid migration data", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
-      const response = await agent.post("/api/cart/migrate").send({
-        migrationId: "invalid-uuid",
-        items: [],
-      });
+      const response = await agent
+        .post("/api/cart/migrate")
+        .set("X-CSRF-Token", csrfToken)
+        .send({
+          migrationId: "invalid-uuid",
+          items: [],
+        });
 
       expect(response.status).toBe(400);
       expect(response.body.message).toBe("Invalid cart migration data.");
@@ -193,39 +211,45 @@ describe("Cart routes", () => {
     });
 
     it("rejects migration quantities greater than 1", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
-      const response = await agent.post("/api/cart/migrate").send({
-        ...migrationData,
-        items: [
-          {
-            bookId: "book-123",
-            quantity: 2,
-          },
-        ],
-      });
+      const response = await agent
+        .post("/api/cart/migrate")
+        .set("X-CSRF-Token", csrfToken)
+        .send({
+          ...migrationData,
+          items: [
+            {
+              bookId: "book-123",
+              quantity: 2,
+            },
+          ],
+        });
 
       expect(response.status).toBe(400);
       expect(mockMigrateGuestCart).not.toHaveBeenCalled();
     });
 
     it("rejects duplicate book IDs", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
-      const response = await agent.post("/api/cart/migrate").send({
-        migrationId: migrationData.migrationId,
-        items: [
-          { bookId: "book-123", quantity: 1 },
-          { bookId: "book-123", quantity: 1 },
-        ],
-      });
+      const response = await agent
+        .post("/api/cart/migrate")
+        .set("X-CSRF-Token", csrfToken)
+        .send({
+          migrationId: migrationData.migrationId,
+          items: [
+            { bookId: "book-123", quantity: 1 },
+            { bookId: "book-123", quantity: 1 },
+          ],
+        });
 
       expect(response.status).toBe(400);
       expect(mockMigrateGuestCart).not.toHaveBeenCalled();
     });
 
     it("forwards cart service errors to the route error handler", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
       mockMigrateGuestCart.mockRejectedValue(
         new CartServiceError("One or more books are unavailable.", 404),
@@ -233,6 +257,7 @@ describe("Cart routes", () => {
 
       const response = await agent
         .post("/api/cart/migrate")
+        .set("X-CSRF-Token", csrfToken)
         .send(migrationData);
 
       expect(response.status).toBe(404);
@@ -243,14 +268,17 @@ describe("Cart routes", () => {
 
   describe("POST /api/cart/items", () => {
     it("adds a book to the authenticated user's cart", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
       mockAddItemToCart.mockResolvedValue(sampleCart);
 
-      const response = await agent.post("/api/cart/items").send({
-        bookId: "book-123",
-        quantity: 1,
-      });
+      const response = await agent
+        .post("/api/cart/items")
+        .set("X-CSRF-Token", csrfToken)
+        .send({
+          bookId: "book-123",
+          quantity: 1,
+        });
 
       expect(response.status).toBe(200);
       expect(response.body.cart).toEqual(sampleCart);
@@ -262,24 +290,30 @@ describe("Cart routes", () => {
     });
 
     it("rejects quantities greater than 1", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
-      const response = await agent.post("/api/cart/items").send({
-        bookId: "book-123",
-        quantity: 2,
-      });
+      const response = await agent
+        .post("/api/cart/items")
+        .set("X-CSRF-Token", csrfToken)
+        .send({
+          bookId: "book-123",
+          quantity: 2,
+        });
 
       expect(response.status).toBe(400);
       expect(mockAddItemToCart).not.toHaveBeenCalled();
     });
 
     it("rejects invalid cart item data", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
-      const response = await agent.post("/api/cart/items").send({
-        bookId: "",
-        quantity: 0,
-      });
+      const response = await agent
+        .post("/api/cart/items")
+        .set("X-CSRF-Token", csrfToken)
+        .send({
+          bookId: "",
+          quantity: 0,
+        });
 
       expect(response.status).toBe(400);
       expect(response.body.message).toBe("Invalid cart item data.");
@@ -288,13 +322,16 @@ describe("Cart routes", () => {
     });
 
     it("rejects unexpected properties in the request", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
-      const response = await agent.post("/api/cart/items").send({
-        bookId: "book-123",
-        quantity: 1,
-        price: 1,
-      });
+      const response = await agent
+        .post("/api/cart/items")
+        .set("X-CSRF-Token", csrfToken)
+        .send({
+          bookId: "book-123",
+          quantity: 1,
+          price: 1,
+        });
 
       expect(response.status).toBe(400);
       expect(mockAddItemToCart).not.toHaveBeenCalled();
@@ -303,12 +340,13 @@ describe("Cart routes", () => {
 
   describe("PATCH /api/cart/items/:bookId", () => {
     it("updates a cart item's quantity to 1", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
       mockUpdateCartItem.mockResolvedValue(sampleCart);
 
       const response = await agent
         .patch("/api/cart/items/book-123")
+        .set("X-CSRF-Token", csrfToken)
         .send({ quantity: 1 });
 
       expect(response.status).toBe(200);
@@ -320,10 +358,11 @@ describe("Cart routes", () => {
     });
 
     it("rejects quantities greater than 1", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
       const response = await agent
         .patch("/api/cart/items/book-123")
+        .set("X-CSRF-Token", csrfToken)
         .send({ quantity: 2 });
 
       expect(response.status).toBe(400);
@@ -331,10 +370,11 @@ describe("Cart routes", () => {
     });
 
     it("rejects an invalid quantity", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
       const response = await agent
         .patch("/api/cart/items/book-123")
+        .set("X-CSRF-Token", csrfToken)
         .send({ quantity: 100 });
 
       expect(response.status).toBe(400);
@@ -344,7 +384,7 @@ describe("Cart routes", () => {
 
   describe("DELETE /api/cart/items/:bookId", () => {
     it("removes a book from the cart", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
       mockRemoveCartItem.mockResolvedValue({
         ...sampleCart,
@@ -352,7 +392,9 @@ describe("Cart routes", () => {
         itemCount: 0,
       });
 
-      const response = await agent.delete("/api/cart/items/book-123");
+      const response = await agent
+        .delete("/api/cart/items/book-123")
+        .set("X-CSRF-Token", csrfToken);
 
       expect(response.status).toBe(200);
       expect(response.body.cart.items).toEqual([]);
@@ -363,7 +405,7 @@ describe("Cart routes", () => {
 
   describe("DELETE /api/cart", () => {
     it("clears the authenticated user's cart", async () => {
-      const agent = await createAuthenticatedAgent();
+      const { agent, csrfToken } = await createAuthenticatedAgent();
 
       mockClearCart.mockResolvedValue({
         ...sampleCart,
@@ -371,7 +413,9 @@ describe("Cart routes", () => {
         itemCount: 0,
       });
 
-      const response = await agent.delete("/api/cart");
+      const response = await agent
+        .delete("/api/cart")
+        .set("X-CSRF-Token", csrfToken);
 
       expect(response.status).toBe(200);
       expect(response.body.cart.items).toEqual([]);

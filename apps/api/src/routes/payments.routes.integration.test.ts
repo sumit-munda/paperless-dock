@@ -10,6 +10,11 @@ import {
   it,
   vi,
 } from "vitest";
+import {
+  orderRateLimiter,
+  paymentOrderRateLimiter,
+  paymentVerificationRateLimiter,
+} from "./orders.routes.js";
 
 const mocks = vi.hoisted(() => ({
   createRazorpayOrder: vi.fn(),
@@ -91,6 +96,15 @@ describe("Payment API integration tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    orderRateLimiter.resetKey(userId);
+    orderRateLimiter.resetKey(anotherUserId);
+
+    paymentOrderRateLimiter.resetKey(userId);
+    paymentOrderRateLimiter.resetKey(anotherUserId);
+
+    paymentVerificationRateLimiter.resetKey(userId);
+    paymentVerificationRateLimiter.resetKey(anotherUserId);
+
     mocks.fetchRazorpayPayment.mockReset();
 
     mocks.createRazorpayOrder.mockResolvedValue({
@@ -158,14 +172,26 @@ describe("Payment API integration tests", () => {
   async function login(userEmail: string) {
     const agent = request.agent(app);
 
-    const response = await agent.post("/api/auth/login").send({
-      email: userEmail,
-      password,
-    });
+    const initialCsrfResponse = await agent.get("/api/auth/csrf-token");
+    expect(initialCsrfResponse.status).toBe(200);
 
-    expect(response.status).toBe(200);
+    const loginResponse = await agent
+      .post("/api/auth/login")
+      .set("X-CSRF-Token", initialCsrfResponse.body.csrfToken)
+      .send({
+        email: userEmail,
+        password,
+      });
 
-    return agent;
+    expect(loginResponse.status).toBe(200);
+
+    const csrfResponse = await agent.get("/api/auth/csrf-token");
+    expect(csrfResponse.status).toBe(200);
+
+    return {
+      agent,
+      csrfToken: csrfResponse.body.csrfToken as string,
+    };
   }
 
   async function createTestOrder(
@@ -249,10 +275,10 @@ describe("Payment API integration tests", () => {
       .post(`/api/orders/${order.id}/payment`)
       .send();
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(403);
 
     expect(response.body).toEqual({
-      message: "Authentication required.",
+      message: "Invalid or missing CSRF token.",
     });
 
     expect(mocks.createRazorpayOrder).not.toHaveBeenCalled();
@@ -263,17 +289,16 @@ describe("Payment API integration tests", () => {
 
     const order = await createTestOrder(userId);
 
-    const agent = await login(email);
+    const { agent, csrfToken } = await login(email);
 
     const response = await agent
       .post(`/api/orders/${order.id}/payment`)
+      .set("X-CSRF-Token", csrfToken)
       .send();
 
     expect(response.status).toBe(201);
 
-    expect(response.body.message).toBe(
-      "Payment order created successfully.",
-    );
+    expect(response.body.message).toBe("Payment order created successfully.");
 
     expect(response.body.payment).toMatchObject({
       keyId: "rzp_test_public_key",
@@ -286,8 +311,7 @@ describe("Payment API integration tests", () => {
 
     expect(mocks.createRazorpayOrder).toHaveBeenCalledTimes(1);
 
-    const razorpayRequest =
-      mocks.createRazorpayOrder.mock.calls[0]?.[0];
+    const razorpayRequest = mocks.createRazorpayOrder.mock.calls[0]?.[0];
 
     expect(razorpayRequest).toMatchObject({
       amount: 29900,
@@ -328,10 +352,11 @@ describe("Payment API integration tests", () => {
 
     const order = await createTestOrder(userId);
 
-    const anotherAgent = await login(anotherEmail);
+    const { agent, csrfToken } = await login(anotherEmail);
 
-    const response = await anotherAgent
+    const response = await agent
       .post(`/api/orders/${order.id}/payment`)
+      .set("X-CSRF-Token", csrfToken)
       .send();
 
     expect(response.status).toBe(404);
@@ -346,10 +371,11 @@ describe("Payment API integration tests", () => {
   it("returns 404 when the order does not exist", async () => {
     await clearTestData();
 
-    const agent = await login(email);
+    const { agent, csrfToken } = await login(email);
 
     const response = await agent
       .post(`/api/orders/${randomUUID()}/payment`)
+      .set("X-CSRF-Token", csrfToken)
       .send();
 
     expect(response.status).toBe(404);
@@ -364,17 +390,13 @@ describe("Payment API integration tests", () => {
   it("rejects payment for an order that is already completed and paid", async () => {
     await clearTestData();
 
-    const order = await createTestOrder(
-      userId,
-      "INR",
-      "COMPLETED",
-      "PAID",
-    );
+    const order = await createTestOrder(userId, "INR", "COMPLETED", "PAID");
 
-    const agent = await login(email);
+    const { agent, csrfToken } = await login(email);
 
     const response = await agent
       .post(`/api/orders/${order.id}/payment`)
+      .set("X-CSRF-Token", csrfToken)
       .send();
 
     expect(response.status).toBe(409);
@@ -389,17 +411,13 @@ describe("Payment API integration tests", () => {
   it("rejects payment for an order that is not pending", async () => {
     await clearTestData();
 
-    const order = await createTestOrder(
-      userId,
-      "INR",
-      "CANCELLED",
-      "PENDING",
-    );
+    const order = await createTestOrder(userId, "INR", "CANCELLED", "PENDING");
 
-    const agent = await login(email);
+    const { agent, csrfToken } = await login(email);
 
     const response = await agent
       .post(`/api/orders/${order.id}/payment`)
+      .set("X-CSRF-Token", csrfToken)
       .send();
 
     expect(response.status).toBe(409);
@@ -412,10 +430,11 @@ describe("Payment API integration tests", () => {
 
     const order = await createTestOrder(userId, "USD");
 
-    const agent = await login(email);
+    const { agent, csrfToken } = await login(email);
 
     const response = await agent
       .post(`/api/orders/${order.id}/payment`)
+      .set("X-CSRF-Token", csrfToken)
       .send();
 
     expect(response.status).toBe(400);
@@ -432,10 +451,11 @@ describe("Payment API integration tests", () => {
 
     const order = await createTestOrder(userId);
 
-    const agent = await login(email);
+    const { agent, csrfToken } = await login(email);
 
     const response = await agent
       .post(`/api/orders/${order.id}/payment`)
+      .set("X-CSRF-Token", csrfToken)
       .send({
         amount: 1,
         currency: "USD",
@@ -467,10 +487,11 @@ describe("Payment API integration tests", () => {
 
     mockCapturedPayment(paymentId, providerOrderId);
 
-    const agent = await login(email);
+    const { agent, csrfToken } = await login(email);
 
     const response = await agent
       .post(`/api/orders/${order.id}/payment/verify`)
+      .set("X-CSRF-Token", csrfToken)
       .send({
         razorpay_order_id: providerOrderId,
         razorpay_payment_id: paymentId,
@@ -521,13 +542,15 @@ describe("Payment API integration tests", () => {
     await clearTestData();
 
     const order = await createTestOrder(userId);
-    const { providerOrderId, paymentId } =
-      await createTestPaymentAttempt(order.id);
+    const { providerOrderId, paymentId } = await createTestPaymentAttempt(
+      order.id,
+    );
 
-    const agent = await login(email);
+    const { agent, csrfToken } = await login(email);
 
     const response = await agent
       .post(`/api/orders/${order.id}/payment/verify`)
+      .set("X-CSRF-Token", csrfToken)
       .send({
         razorpay_order_id: providerOrderId,
         razorpay_payment_id: paymentId,
@@ -560,10 +583,11 @@ describe("Payment API integration tests", () => {
       status: "authorized",
     });
 
-    const agent = await login(email);
+    const { agent, csrfToken } = await login(email);
 
     const response = await agent
       .post(`/api/orders/${order.id}/payment/verify`)
+      .set("X-CSRF-Token", csrfToken)
       .send({
         razorpay_order_id: providerOrderId,
         razorpay_payment_id: paymentId,
@@ -572,9 +596,7 @@ describe("Payment API integration tests", () => {
 
     expect(response.status).toBe(409);
 
-    expect(response.body.message).toBe(
-      "Payment has not been captured yet.",
-    );
+    expect(response.body.message).toBe("Payment has not been captured yet.");
 
     const updatedAttempt = await prisma.paymentAttempt.findUnique({
       where: { id: attempt.id },
@@ -602,17 +624,19 @@ describe("Payment API integration tests", () => {
     await clearTestData();
 
     const order = await createTestOrder(userId);
-    const { providerOrderId, paymentId } =
-      await createTestPaymentAttempt(order.id);
+    const { providerOrderId, paymentId } = await createTestPaymentAttempt(
+      order.id,
+    );
 
     mockCapturedPayment(paymentId, providerOrderId, {
       amount: 100,
     });
 
-    const agent = await login(email);
+    const { agent, csrfToken } = await login(email);
 
     const response = await agent
       .post(`/api/orders/${order.id}/payment/verify`)
+      .set("X-CSRF-Token", csrfToken)
       .send({
         razorpay_order_id: providerOrderId,
         razorpay_payment_id: paymentId,
@@ -636,15 +660,17 @@ describe("Payment API integration tests", () => {
     await clearTestData();
 
     const order = await createTestOrder(userId);
-    const { providerOrderId, paymentId } =
-      await createTestPaymentAttempt(order.id);
+    const { providerOrderId, paymentId } = await createTestPaymentAttempt(
+      order.id,
+    );
 
     mockCapturedPayment(paymentId, `order_${randomUUID()}`);
 
-    const agent = await login(email);
+    const { agent, csrfToken } = await login(email);
 
     const response = await agent
       .post(`/api/orders/${order.id}/payment/verify`)
+      .set("X-CSRF-Token", csrfToken)
       .send({
         razorpay_order_id: providerOrderId,
         razorpay_payment_id: paymentId,
@@ -668,13 +694,15 @@ describe("Payment API integration tests", () => {
     await clearTestData();
 
     const order = await createTestOrder(userId);
-    const { providerOrderId, paymentId } =
-      await createTestPaymentAttempt(order.id);
+    const { providerOrderId, paymentId } = await createTestPaymentAttempt(
+      order.id,
+    );
 
-    const anotherAgent = await login(anotherEmail);
+    const { agent, csrfToken } = await login(anotherEmail);
 
-    const response = await anotherAgent
+    const response = await agent
       .post(`/api/orders/${order.id}/payment/verify`)
+      .set("X-CSRF-Token", csrfToken)
       .send({
         razorpay_order_id: providerOrderId,
         razorpay_payment_id: paymentId,
@@ -698,12 +726,13 @@ describe("Payment API integration tests", () => {
     await clearTestData();
 
     const order = await createTestOrder(userId);
-    const { providerOrderId, paymentId } =
-      await createTestPaymentAttempt(order.id);
+    const { providerOrderId, paymentId } = await createTestPaymentAttempt(
+      order.id,
+    );
 
     mockCapturedPayment(paymentId, providerOrderId);
 
-    const agent = await login(email);
+    const { agent, csrfToken } = await login(email);
 
     const verificationPayload = {
       razorpay_order_id: providerOrderId,
@@ -713,12 +742,14 @@ describe("Payment API integration tests", () => {
 
     const firstResponse = await agent
       .post(`/api/orders/${order.id}/payment/verify`)
+      .set("X-CSRF-Token", csrfToken)
       .send(verificationPayload);
 
     expect(firstResponse.status).toBe(200);
 
     const secondResponse = await agent
       .post(`/api/orders/${order.id}/payment/verify`)
+      .set("X-CSRF-Token", csrfToken)
       .send(verificationPayload);
 
     expect(secondResponse.status).toBe(200);

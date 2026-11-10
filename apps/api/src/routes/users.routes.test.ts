@@ -49,14 +49,26 @@ async function createAuthenticatedAgent() {
 
   const agent = request.agent(app);
 
-  const loginResponse = await agent.post("/api/auth/login").send({
-    email: customer.email,
-    password: "Password123!",
-  });
+  const initialCsrfResponse = await agent.get("/api/auth/csrf-token");
+  expect(initialCsrfResponse.status).toBe(200);
+
+  const loginResponse = await agent
+    .post("/api/auth/login")
+    .set("X-CSRF-Token", initialCsrfResponse.body.csrfToken)
+    .send({
+      email: customer.email,
+      password: "Password123!",
+    });
 
   expect(loginResponse.status).toBe(200);
 
-  return agent;
+  const csrfResponse = await agent.get("/api/auth/csrf-token");
+  expect(csrfResponse.status).toBe(200);
+
+  return {
+    agent,
+    csrfToken: csrfResponse.body.csrfToken as string,
+  };
 }
 
 describe("GET /api/users/me", () => {
@@ -74,7 +86,7 @@ describe("GET /api/users/me", () => {
   });
 
   it("returns the authenticated user's profile", async () => {
-    const agent = await createAuthenticatedAgent();
+    const { agent } = await createAuthenticatedAgent();
 
     mockFindUnique.mockResolvedValue(authenticatedUser);
 
@@ -98,16 +110,20 @@ describe("PATCH /api/users/me", () => {
     vi.resetAllMocks();
   });
 
-  it("returns 401 when the user is not authenticated", async () => {
+  it("returns 403 when the user is not authenticated", async () => {
     const response = await request(app)
       .patch("/api/users/me")
       .send({ name: "Updated Name" });
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(403);
+
+    expect(response.body).toEqual({
+      message: "Invalid or missing CSRF token.",
+    });
   });
 
   it("updates the user's name", async () => {
-    const agent = await createAuthenticatedAgent();
+    const { agent, csrfToken } = await createAuthenticatedAgent();
 
     mockFindUnique.mockResolvedValue(authenticatedUser);
 
@@ -118,6 +134,7 @@ describe("PATCH /api/users/me", () => {
 
     const response = await agent
       .patch("/api/users/me")
+      .set("X-CSRF-Token", csrfToken)
       .send({ name: "Updated Name" });
 
     expect(response.status).toBe(200);
@@ -134,7 +151,7 @@ describe("PATCH /api/users/me", () => {
   });
 
   it("updates the user's avatar", async () => {
-    const agent = await createAuthenticatedAgent();
+    const { agent, csrfToken } = await createAuthenticatedAgent();
 
     mockFindUnique.mockResolvedValue(authenticatedUser);
 
@@ -145,16 +162,15 @@ describe("PATCH /api/users/me", () => {
 
     const response = await agent
       .patch("/api/users/me")
+      .set("X-CSRF-Token", csrfToken)
       .send({ avatar: "https://example.com/avatar.png" });
 
     expect(response.status).toBe(200);
-    expect(response.body.user.avatar).toBe(
-      "https://example.com/avatar.png",
-    );
+    expect(response.body.user.avatar).toBe("https://example.com/avatar.png");
   });
 
   it("allows the user to remove their avatar", async () => {
-    const agent = await createAuthenticatedAgent();
+    const { agent, csrfToken } = await createAuthenticatedAgent();
 
     mockFindUnique.mockResolvedValue(authenticatedUser);
 
@@ -165,6 +181,7 @@ describe("PATCH /api/users/me", () => {
 
     const response = await agent
       .patch("/api/users/me")
+      .set("X-CSRF-Token", csrfToken)
       .send({ avatar: null });
 
     expect(response.status).toBe(200);
@@ -172,12 +189,13 @@ describe("PATCH /api/users/me", () => {
   });
 
   it("rejects invalid profile information", async () => {
-    const agent = await createAuthenticatedAgent();
+    const { agent, csrfToken } = await createAuthenticatedAgent();
 
     mockFindUnique.mockResolvedValue(authenticatedUser);
 
     const response = await agent
       .patch("/api/users/me")
+      .set("X-CSRF-Token", csrfToken)
       .send({ name: "J" });
 
     expect(response.status).toBe(400);
@@ -187,12 +205,13 @@ describe("PATCH /api/users/me", () => {
   });
 
   it("rejects attempts to modify email or role", async () => {
-    const agent = await createAuthenticatedAgent();
+    const { agent, csrfToken } = await createAuthenticatedAgent();
 
     mockFindUnique.mockResolvedValue(authenticatedUser);
 
     const response = await agent
       .patch("/api/users/me")
+      .set("X-CSRF-Token", csrfToken)
       .send({
         name: "Updated Name",
         email: "new@example.com",
@@ -204,11 +223,14 @@ describe("PATCH /api/users/me", () => {
   });
 
   it("rejects an empty update request", async () => {
-    const agent = await createAuthenticatedAgent();
+    const { agent, csrfToken } = await createAuthenticatedAgent();
 
     mockFindUnique.mockResolvedValue(authenticatedUser);
 
-    const response = await agent.patch("/api/users/me").send({});
+    const response = await agent
+      .patch("/api/users/me")
+      .set("X-CSRF-Token", csrfToken)
+      .send({});
 
     expect(response.status).toBe(400);
     expect(mockUpdate).not.toHaveBeenCalled();

@@ -14,6 +14,9 @@
     "apps/*",
     "packages/*"
   ],
+  "overrides": {
+    "deepmerge-ts": "^8.0.2"
+  },
   "devDependencies": {
     "@types/node": "^26.6.5",
     "vitest": "^5.0.5"

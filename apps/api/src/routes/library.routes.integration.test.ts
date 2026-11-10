@@ -140,12 +140,18 @@ describe("Library API integration tests", () => {
   async function login(userEmail: string) {
     const agent = request.agent(app);
 
-    const response = await agent.post("/api/auth/login").send({
-      email: userEmail,
-      password,
-    });
+    const initialCsrfResponse = await agent.get("/api/auth/csrf-token");
+    expect(initialCsrfResponse.status).toBe(200);
 
-    expect(response.status).toBe(200);
+    const loginResponse = await agent
+      .post("/api/auth/login")
+      .set("X-CSRF-Token", initialCsrfResponse.body.csrfToken)
+      .send({
+        email: userEmail,
+        password,
+      });
+
+    expect(loginResponse.status).toBe(200);
 
     return agent;
   }

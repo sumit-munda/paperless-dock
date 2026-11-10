@@ -11,12 +11,10 @@ import {
   vi,
 } from "vitest";
 
-const { mockUploadBookPdf, mockDeleteStoredObject } = vi.hoisted(
-  () => ({
-    mockUploadBookPdf: vi.fn(),
-    mockDeleteStoredObject: vi.fn(),
-  }),
-);
+const { mockUploadBookPdf, mockDeleteStoredObject } = vi.hoisted(() => ({
+  mockUploadBookPdf: vi.fn(),
+  mockDeleteStoredObject: vi.fn(),
+}));
 
 // Mock R2 storage. PostgreSQL remains real.
 vi.mock("../services/storage.service.js", () => ({
@@ -86,18 +84,16 @@ describe("Admin PDF upload integration tests", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    mockUploadBookPdf.mockImplementation(
-      async (id: string, buffer: Buffer) => {
-        if (
-          buffer.length < 5 ||
-          buffer.subarray(0, 5).toString("ascii") !== "%PDF-"
-        ) {
-          throw new Error("The uploaded file is not a valid PDF.");
-        }
+    mockUploadBookPdf.mockImplementation(async (id: string, buffer: Buffer) => {
+      if (
+        buffer.length < 5 ||
+        buffer.subarray(0, 5).toString("ascii") !== "%PDF-"
+      ) {
+        throw new Error("The uploaded file is not a valid PDF.");
+      }
 
-        return `books/${id}/${randomUUID()}.pdf`;
-      },
-    );
+      return `books/${id}/${randomUUID()}.pdf`;
+    });
 
     mockDeleteStoredObject.mockResolvedValue(undefined);
 
@@ -136,33 +132,34 @@ describe("Admin PDF upload integration tests", () => {
   async function login(email: string) {
     const agent = request.agent(app);
 
-    const response = await agent.post("/api/auth/login").send({
-      email,
-      password,
-    });
+    // Obtain the initial session's CSRF token.
+    const initialCsrfResponse = await agent.get("/api/auth/csrf-token");
 
-    expect(response.status).toBe(200);
+    expect(initialCsrfResponse.status).toBe(200);
 
-    return agent;
+    const loginResponse = await agent
+      .post("/api/auth/login")
+      .set("X-CSRF-Token", initialCsrfResponse.body.csrfToken)
+      .send({
+        email,
+        password,
+      });
+
+    expect(loginResponse.status).toBe(200);
+
+    // Login regenerates the session.
+    const csrfResponse = await agent.get("/api/auth/csrf-token");
+
+    expect(csrfResponse.status).toBe(200);
+
+    return {
+      agent,
+      csrfToken: csrfResponse.body.csrfToken as string,
+    };
   }
 
   it("rejects unauthenticated PDF uploads", async () => {
     const response = await request(app)
-      .post(`/api/admin/books/${bookId}/content`)
-      .attach("file", validPdf, {
-        filename: "test.pdf",
-        contentType: "application/pdf",
-      });
-
-    expect(response.status).toBe(401);
-
-    expect(mockUploadBookPdf).not.toHaveBeenCalled();
-  });
-
-  it("rejects PDF uploads from customers", async () => {
-    const agent = await login(customerEmail);
-
-    const response = await agent
       .post(`/api/admin/books/${bookId}/content`)
       .attach("file", validPdf, {
         filename: "test.pdf",
@@ -174,11 +171,28 @@ describe("Admin PDF upload integration tests", () => {
     expect(mockUploadBookPdf).not.toHaveBeenCalled();
   });
 
-  it("allows administrators to upload PDFs and persists the object key", async () => {
-    const agent = await login(adminEmail);
+  it("rejects PDF uploads from customers", async () => {
+    const { agent, csrfToken } = await login(customerEmail);
 
     const response = await agent
       .post(`/api/admin/books/${bookId}/content`)
+      .set("X-CSRF-Token", csrfToken)
+      .attach("file", validPdf, {
+        filename: "test.pdf",
+        contentType: "application/pdf",
+      });
+
+    expect(response.status).toBe(403);
+
+    expect(mockUploadBookPdf).not.toHaveBeenCalled();
+  });
+
+  it("allows administrators to upload PDFs and persists the object key", async () => {
+    const { agent, csrfToken } = await login(adminEmail);
+
+    const response = await agent
+      .post(`/api/admin/books/${bookId}/content`)
+      .set("X-CSRF-Token", csrfToken)
       .attach("file", validPdf, {
         filename: "test.pdf",
         contentType: "application/pdf",
@@ -222,10 +236,10 @@ describe("Admin PDF upload integration tests", () => {
       },
     });
 
-    const agent = await login(adminEmail);
+    const {agent, csrfToken} = await login(adminEmail);
 
     const response = await agent
-      .post(`/api/admin/books/${bookId}/content`)
+      .post(`/api/admin/books/${bookId}/content`).set("X-CSRF-Token", csrfToken)
       .attach("file", validPdf, {
         filename: "replacement.pdf",
         contentType: "application/pdf",

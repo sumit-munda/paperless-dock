@@ -4,6 +4,7 @@ import { Prisma } from "../generated/prisma/client.js";
 import prisma from "../prisma.js";
 import { loginSchema, registerSchema } from "../validation/auth.schema.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { generateToken } from "../csrf.js";
 
 const router = Router();
 
@@ -16,6 +17,12 @@ const publicUserSelect = {
   createdAt: true,
   updatedAt: true,
 } as const;
+
+router.get("/csrf-token", (req, res) => {
+  return res.status(200).json({
+    csrfToken: generateToken(req),
+  });
+});
 
 router.post("/register", async (req, res, next) => {
   try {

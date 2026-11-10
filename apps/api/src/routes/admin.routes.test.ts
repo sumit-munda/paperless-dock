@@ -57,14 +57,28 @@ async function loginAsAdmin() {
 
   const agent = request.agent(app);
 
-  const response = await agent.post("/api/auth/login").send({
-    email: "admin@example.com",
-    password: "Password123!",
-  });
+  const initialCsrfResponse = await agent.get("/api/auth/csrf-token");
 
-  expect(response.status).toBe(200);
+  expect(initialCsrfResponse.status).toBe(200);
 
-  return agent;
+  const loginResponse = await agent
+    .post("/api/auth/login")
+    .set("X-CSRF-Token", initialCsrfResponse.body.csrfToken)
+    .send({
+      email: "admin@example.com",
+      password: "Password123!",
+    });
+
+  expect(loginResponse.status).toBe(200);
+
+  const csrfResponse = await agent.get("/api/auth/csrf-token");
+
+  expect(csrfResponse.status).toBe(200);
+
+  return {
+    agent,
+    csrfToken: csrfResponse.body.csrfToken as string,
+  };
 }
 
 async function loginAsCustomer() {
@@ -79,14 +93,28 @@ async function loginAsCustomer() {
 
   const agent = request.agent(app);
 
-  const response = await agent.post("/api/auth/login").send({
-    email: "jane@example.com",
-    password: "Password123!",
-  });
+  const initialCsrfResponse = await agent.get("/api/auth/csrf-token");
 
-  expect(response.status).toBe(200);
+  expect(initialCsrfResponse.status).toBe(200);
 
-  return agent;
+  const loginResponse = await agent
+    .post("/api/auth/login")
+    .set("X-CSRF-Token", initialCsrfResponse.body.csrfToken)
+    .send({
+      email: "jane@example.com",
+      password: "Password123!",
+    });
+
+  expect(loginResponse.status).toBe(200);
+
+  const csrfResponse = await agent.get("/api/auth/csrf-token");
+
+  expect(csrfResponse.status).toBe(200);
+
+  return {
+    agent,
+    csrfToken: csrfResponse.body.csrfToken as string,
+  };
 }
 
 describe("GET /api/admin/dashboard", () => {
@@ -106,7 +134,7 @@ describe("GET /api/admin/dashboard", () => {
   });
 
   it("returns 403 when a customer accesses the admin dashboard", async () => {
-    const agent = await loginAsCustomer();
+    const { agent } = await loginAsCustomer();
 
     const response = await agent.get("/api/admin/dashboard");
 
@@ -117,7 +145,7 @@ describe("GET /api/admin/dashboard", () => {
   });
 
   it("returns 200 when an administrator accesses the dashboard", async () => {
-    const agent = await loginAsAdmin();
+    const { agent } = await loginAsAdmin();
 
     const response = await agent.get("/api/admin/dashboard");
 
@@ -158,7 +186,7 @@ describe("POST /api/admin/books/:bookId/content", () => {
     mockDeleteStoredObject.mockResolvedValue(undefined);
   });
 
-  it("returns 401 when an unauthenticated user attempts an upload", async () => {
+  it("returns 403 when an unauthenticated user attempts an upload without a CSRF token", async () => {
     const response = await request(app)
       .post("/api/admin/books/book-123/content")
       .attach("file", validPdf, {
@@ -166,18 +194,19 @@ describe("POST /api/admin/books/:bookId/content", () => {
         contentType: "application/pdf",
       });
 
-    expect(response.status).toBe(401);
-    expect(response.body.message).toBe("Authentication required.");
+    expect(response.status).toBe(403);
+    expect(response.body.message).toBe("Invalid or missing CSRF token.");
 
     expect(mockUploadBookPdf).not.toHaveBeenCalled();
     expect(mockBookFindUnique).not.toHaveBeenCalled();
   });
 
   it("returns 403 when a customer attempts an upload", async () => {
-    const agent = await loginAsCustomer();
+    const { agent, csrfToken } = await loginAsCustomer();
 
     const response = await agent
       .post("/api/admin/books/book-123/content")
+      .set("X-CSRF-Token", csrfToken)
       .attach("file", validPdf, {
         filename: "test.pdf",
         contentType: "application/pdf",
@@ -190,10 +219,11 @@ describe("POST /api/admin/books/:bookId/content", () => {
   });
 
   it("returns 400 when no PDF file is provided", async () => {
-    const agent = await loginAsAdmin();
+    const { agent, csrfToken } = await loginAsAdmin();
 
     const response = await agent
-      .post("/api/admin/books/book-123/content");
+      .post("/api/admin/books/book-123/content")
+      .set("X-CSRF-Token", csrfToken);
 
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Please upload a PDF file.");
@@ -202,7 +232,7 @@ describe("POST /api/admin/books/:bookId/content", () => {
   });
 
   it("rejects a file without a valid PDF signature", async () => {
-    const agent = await loginAsAdmin();
+    const { agent, csrfToken } = await loginAsAdmin();
 
     mockBookFindUnique.mockResolvedValue({
       id: "book-123",
@@ -211,26 +241,26 @@ describe("POST /api/admin/books/:bookId/content", () => {
 
     const response = await agent
       .post("/api/admin/books/book-123/content")
+      .set("X-CSRF-Token", csrfToken)
       .attach("file", Buffer.from("This is not a PDF"), {
         filename: "fake.pdf",
         contentType: "application/pdf",
       });
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toBe(
-      "The uploaded file is not a valid PDF.",
-    );
+    expect(response.body.message).toBe("The uploaded file is not a valid PDF.");
 
     expect(mockBookUpdate).not.toHaveBeenCalled();
   });
 
   it("returns 404 when the requested book does not exist", async () => {
-    const agent = await loginAsAdmin();
+    const { agent, csrfToken } = await loginAsAdmin();
 
     mockBookFindUnique.mockResolvedValue(null);
 
     const response = await agent
       .post("/api/admin/books/nonexistent/content")
+      .set("X-CSRF-Token", csrfToken)
       .attach("file", validPdf, {
         filename: "test.pdf",
         contentType: "application/pdf",
@@ -243,7 +273,7 @@ describe("POST /api/admin/books/:bookId/content", () => {
   });
 
   it("uploads a PDF and saves its object key in the database", async () => {
-    const agent = await loginAsAdmin();
+    const { agent, csrfToken } = await loginAsAdmin();
 
     mockBookFindUnique.mockResolvedValue({
       id: "book-123",
@@ -252,6 +282,7 @@ describe("POST /api/admin/books/:bookId/content", () => {
 
     const response = await agent
       .post("/api/admin/books/book-123/content")
+      .set("X-CSRF-Token", csrfToken)
       .attach("file", validPdf, {
         filename: "test.pdf",
         contentType: "application/pdf",
@@ -282,7 +313,7 @@ describe("POST /api/admin/books/:bookId/content", () => {
   });
 
   it("deletes the previous PDF after successfully replacing it", async () => {
-    const agent = await loginAsAdmin();
+    const { agent, csrfToken } = await loginAsAdmin();
 
     mockBookFindUnique.mockResolvedValue({
       id: "book-123",
@@ -291,6 +322,7 @@ describe("POST /api/admin/books/:bookId/content", () => {
 
     const response = await agent
       .post("/api/admin/books/book-123/content")
+      .set("X-CSRF-Token", csrfToken)
       .attach("file", validPdf, {
         filename: "replacement.pdf",
         contentType: "application/pdf",
@@ -305,19 +337,18 @@ describe("POST /api/admin/books/:bookId/content", () => {
   });
 
   it("does not delete the old PDF when the database update fails", async () => {
-    const agent = await loginAsAdmin();
+    const { agent, csrfToken } = await loginAsAdmin();
 
     mockBookFindUnique.mockResolvedValue({
       id: "book-123",
       contentReference: "books/book-123/old-content.pdf",
     });
 
-    mockBookUpdate.mockRejectedValue(
-      new Error("Database update failed."),
-    );
+    mockBookUpdate.mockRejectedValue(new Error("Database update failed."));
 
     const response = await agent
       .post("/api/admin/books/book-123/content")
+      .set("X-CSRF-Token", csrfToken)
       .attach("file", validPdf, {
         filename: "replacement.pdf",
         contentType: "application/pdf",

@@ -29,3 +29,13 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Credentials
+credentials/
+.secrets/

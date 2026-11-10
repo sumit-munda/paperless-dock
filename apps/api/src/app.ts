@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { PACKAGE_NAME } from "@paperless-dock/shared";
 import prisma from "./prisma.js";
+import { csrfSynchronisedProtection, invalidCsrfTokenError } from "./csrf.js";
 import sessionMiddleware from "./session.js";
 import authRouter from "./routes/auth.routes.js";
 import adminRouter from "./routes/admin.routes.js";
@@ -33,6 +34,7 @@ app.use(
 app.use(express.json());
 
 app.use(sessionMiddleware);
+app.use(csrfSynchronisedProtection);
 
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
@@ -143,6 +145,12 @@ app.use(
     _next: express.NextFunction,
   ) => {
     console.error("API error:", error);
+
+    if (error === invalidCsrfTokenError) {
+      return res.status(403).json({
+        message: "Invalid or missing CSRF token.",
+      });
+    }
 
     res.status(500).json({
       message: "Internal server error",

@@ -111,12 +111,18 @@ describe("Orders API integration tests", () => {
   async function login(userEmail: string) {
     const agent = request.agent(app);
 
-    const response = await agent.post("/api/auth/login").send({
-      email: userEmail,
-      password,
-    });
+    const initialCsrfResponse = await agent.get("/api/auth/csrf-token");
+    expect(initialCsrfResponse.status).toBe(200);
 
-    expect(response.status).toBe(200);
+    const loginResponse = await agent
+      .post("/api/auth/login")
+      .set("X-CSRF-Token", initialCsrfResponse.body.csrfToken)
+      .send({
+        email: userEmail,
+        password,
+      });
+
+    expect(loginResponse.status).toBe(200);
 
     return agent;
   }
@@ -153,9 +159,7 @@ describe("Orders API integration tests", () => {
 
     const order = await createTestOrder(userId);
 
-    const response = await request(app).get(
-      `/api/orders/${order.id}`,
-    );
+    const response = await request(app).get(`/api/orders/${order.id}`);
 
     expect(response.status).toBe(401);
 
@@ -171,9 +175,7 @@ describe("Orders API integration tests", () => {
 
     const agent = await login(email);
 
-    const response = await agent.get(
-      `/api/orders/${order.id}`,
-    );
+    const response = await agent.get(`/api/orders/${order.id}`);
 
     expect(response.status).toBe(200);
 
@@ -195,9 +197,7 @@ describe("Orders API integration tests", () => {
       quantity: 1,
     });
 
-    expect(
-      Number(response.body.order.items[0].priceSnapshot),
-    ).toBe(299);
+    expect(Number(response.body.order.items[0].priceSnapshot)).toBe(299);
   });
 
   it("returns 404 when the order does not exist", async () => {
@@ -205,9 +205,7 @@ describe("Orders API integration tests", () => {
 
     const agent = await login(email);
 
-    const response = await agent.get(
-      `/api/orders/${randomUUID()}`,
-    );
+    const response = await agent.get(`/api/orders/${randomUUID()}`);
 
     expect(response.status).toBe(404);
 
@@ -223,9 +221,7 @@ describe("Orders API integration tests", () => {
 
     const anotherAgent = await login(anotherEmail);
 
-    const response = await anotherAgent.get(
-      `/api/orders/${order.id}`,
-    );
+    const response = await anotherAgent.get(`/api/orders/${order.id}`);
 
     expect(response.status).toBe(404);
 

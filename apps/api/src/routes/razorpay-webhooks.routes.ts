@@ -6,8 +6,16 @@ import {
   recordFailedPayment,
   PaymentServiceError,
 } from "../services/payments.service.js";
+import { rateLimit } from "express-rate-limit";
 
 const router = Router();
+
+const webhookRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 1000,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
 
 const PROCESSING_LEASE_MS = 10 * 60 * 1000;
 
@@ -85,7 +93,7 @@ function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", webhookRateLimiter, async (req: Request, res: Response) => {
   const rawBody = req.body;
 
   if (!Buffer.isBuffer(rawBody)) {
