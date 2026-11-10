@@ -15,7 +15,7 @@ const HomePage = () => {
       </p>
 
       <Link className="primary-button" to="/books">
-        Explore Boooks
+        Explore Books
       </Link>
     </section>
   );
