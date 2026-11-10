@@ -14,10 +14,11 @@ import libraryRouter from "./routes/library.routes.js";
 import razorpayWebhooksRouter from "./routes/razorpay-webhooks.routes.js";
 
 const app = express();
+app.set("trust proxy", 1);
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true,
     exposedHeaders: ["Accept-Ranges", "Content-Range", "Content-Length"],
   }),

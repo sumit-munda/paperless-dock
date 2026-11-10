@@ -1,13 +1,6 @@
 import type { Book } from "../data/books";
 import { apiRequest } from "./apiRequest";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-if (!API_BASE_URL) {
-  throw new Error(
-    "Missing VITE_API_BASE_URL. Add it to apps/web/.env and restart the frontend server.",
-  );
-}
+import { API_BASE_URL } from "./config";
 
 const BOOKS_API_URL = `${API_BASE_URL}/api/books`;
 
