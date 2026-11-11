@@ -34,6 +34,13 @@ app.use(
 
 app.use(express.json());
 
+app.get("/api/health", (_req, res) => {
+  res.json({
+    status: "ok",
+    sharedPackage: PACKAGE_NAME,
+  });
+});
+
 app.use(sessionMiddleware);
 app.use(csrfSynchronisedProtection);
 

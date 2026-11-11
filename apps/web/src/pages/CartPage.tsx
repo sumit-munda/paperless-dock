@@ -193,6 +193,63 @@ const CartPage = () => {
           </p>
         )}
 
+        <div className="demo-payment-notice">
+          <p>
+            <strong>Demo Payment Mode — No real money is charged.</strong>
+            <br />
+            Paperless Dock uses Razorpay Test Mode. You can explore the checkout
+            process using the test credentials below.
+          </p>
+
+          <details>
+            <summary>How to test payments</summary>
+
+            <div className="demo-payment-instructions">
+              <h3>Contact Details</h3>
+              <p>
+                Enter your own email address and mobile number when prompted. No
+                special test credentials are required.
+              </p>
+
+              <h3>Netbanking (Recommended)</h3>
+              <ol>
+                <li>Select Netbanking in the Razorpay checkout window.</li>
+                <li>Choose any listed bank.</li>
+                <li>
+                  On the simulated bank page, select Success to complete the
+                  test payment.
+                </li>
+              </ol>
+
+              <p>
+                You can also select Failure to explore an unsuccessful payment.
+              </p>
+
+              <p>
+                Your contact details are submitted to Razorpay during checkout.
+              </p>
+
+              <h3>Card</h3>
+              <p>
+                Visa test card: <code>4100 2800 0000 1007</code>
+              </p>
+              <p>CVV: Any CVV · Expiry: Any future date</p>
+
+              <p>
+                For more test cards and payment scenarios, see{" "}
+                <a
+                  href="https://razorpay.com/docs/payments/payments/test-card-upi-details/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Razorpay's official test payment documentation
+                </a>
+                .
+              </p>
+            </div>
+          </details>
+        </div>
+
         <p className="checkout-note">
           Your order will be created with payment pending. No library access
           will be granted until payment is verified.
