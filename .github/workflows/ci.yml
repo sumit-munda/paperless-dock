@@ -57,6 +57,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Prepare test database
+        run: |
+          node --input-type=module <<'NODE'
+          import pg from "pg";
+          import { readFile } from "node:fs/promises";
+
+          const pool = new pg.Pool({
+            connectionString: process.env.DATABASE_URL,
+          });
+
+          try {
+            const schema = await readFile(
+              "node_modules/connect-pg-simple/table.sql",
+              "utf8"
+            );
+
+            await pool.query(schema);
+            console.log("Session table created successfully.");
+          } finally {
+            await pool.end();
+          }
+          NODE
+
       - name: Build shared package
         run: npm run build --workspace=@paperless-dock/shared
 
