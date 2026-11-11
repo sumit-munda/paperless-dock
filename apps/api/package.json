@@ -19,7 +19,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && node --input-type=module -e \"import { cpSync, mkdirSync } from 'node:fs'; mkdirSync('dist/generated', { recursive: true }); cpSync('src/generated/prisma', 'dist/generated/prisma', { recursive: true });\"",
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts"
@@ -31,6 +31,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1163.0",
     "@paperless-dock/shared": "^1.0.0",
+    "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
     "connect-pg-simple": "^10.0.0",
